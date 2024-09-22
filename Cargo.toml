@@ -1,0 +1,8 @@
+[package]
+name = "dayquest_aglorythm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rand = "0.8.5"
+uuid = { version = "1.10.0", features = ["v4"] }
