@@ -17,7 +17,7 @@ fn main() {
     let mut test_vid = Video::new(
         Uuid::new_v4(),
         80,
-        1000,
+        120,
         Security::Normal,
         SystemTime::now(),
     );
@@ -27,7 +27,7 @@ fn main() {
         Uuid::new_v4(),
         3000,
         16_000,
-        Security::Sus2(0.90),
+        Security::Normal,
         SystemTime::now(),
     );
     calc_score(&mut test_vid, viral_score);
@@ -80,7 +80,6 @@ fn calc_score(video: &mut Video, viral_score: f64) {
     }
 
     let age = (age.unwrap().as_secs() / 60 * 2) as f64;
-
 
 
     // Viral and non-viral balancing
