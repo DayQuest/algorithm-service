@@ -34,8 +34,8 @@ fn main() {
     println!("{}", test_vid.score);
     let mut test_vid = Video::new(
         Uuid::new_v4(),
-        1_000_000,
-        35_000_000,
+        300,
+        0,
         Security::Normal,
         SystemTime::now(),
     );
@@ -57,8 +57,11 @@ fn calc_score(video: &mut Video, viral_score: f64) {
     video.score += (video.likes as f64 / 10.).powf(1.2);
     video.score += (video.views as f64 / 10.).powf(1.09);
 
+    println!("Vidoe score after like/views: {}", video.score);
+
     //Engagement Rate
     video.score *= video.likes as f64 / video.views as f64;
+    println!("Engagement Rate: {}", video.score);
 
     match video.state {
         State::Boosted => video.score *= 2.,
@@ -71,6 +74,8 @@ fn calc_score(video: &mut Video, viral_score: f64) {
         Security::Sus(factor) | Security::Sus2(factor) => video.score *= 1. - factor as f64,
         Normal => {}
     }
+
+    println!("State & Security: {}", video.score);
 
     let age = SystemTime::now().duration_since(video.upload_at);
 
@@ -85,7 +90,7 @@ fn calc_score(video: &mut Video, viral_score: f64) {
     // Viral and non-viral balancing
     let virality = video.score / viral_score; // 1.6
     let balancer = video.score * (1. - virality);
-    println!("\nBalancer {balancer}, before: {}, virality: {virality}", video.score);
+    println!("Balancer {balancer}, before: {}, virality: {virality}", video.score);
 
     if virality < 1. {
         video.score += balancer;
