@@ -1,180 +1,31 @@
-use crate::Security::Normal;
-use rand::Rng;
-use std::{collections::linked_list, f64::consts::E, iter::Scan, time::SystemTime};
+use algorythm::{Security, Video};
+use std::time::SystemTime;
 use uuid::Uuid;
 
+mod algorythm;
 fn main() {
-    const viral_score: f64 = 350_000.;
-    let mut test_vid = Video::new(
+    const VIRAL_SCORE: f64 = 10_000.;
+    algorythm::calc_score(&mut Video::new(
         Uuid::new_v4(),
-        118, //likes
-        340, //views
+        0, //likes
+        12, //views
         Security::Normal,
         SystemTime::now(),
-    );
-    calc_score(&mut test_vid, viral_score);
-    println!("{}", test_vid.score);
-    let mut test_vid = Video::new(
+    ), VIRAL_SCORE);
+
+    algorythm::calc_score(&mut Video::new(
         Uuid::new_v4(),
-        200,
-        12_000,
+        1500, //likes
+        120_000, //views
         Security::Normal,
         SystemTime::now(),
-    );
-    calc_score(&mut test_vid, viral_score);
-    println!("{}", test_vid.score);
-    let mut test_vid = Video::new(
+    ), VIRAL_SCORE);
+
+    algorythm::calc_score(&mut Video::new(
         Uuid::new_v4(),
-        0,
-        12,
+        200_000, //likes
+        12_000_000, //views
         Security::Normal,
         SystemTime::now(),
-    );
-    calc_score(&mut test_vid, viral_score);
-    println!("{}", test_vid.score);
-    let mut test_vid = Video::new(
-        Uuid::new_v4(),
-        200_000,
-        2_500_000,
-        Security::Normal,
-        SystemTime::now(),
-    );
-    calc_score(&mut test_vid, viral_score);
-    println!("{}", test_vid.score);
-}
-
-fn _next_vid<'a>(user: User, videos: Vec<Video>) -> &'a str {
-    if videos.is_empty() {
-        return "No videos present to choose from.";
-    }
-
-    return "kp";
-}
-
-fn calc_score(video: &mut Video, viral_score: f64) {
-    video.score = 1.0;
-
-    video.score += (video.likes as f64 / 10.).powf(1.2);
-    video.score += (video.views as f64 / 10.).powf(1.09);
-
-    println!("Vid score after like/views: {}", video.score);
-
-    //Engagement Rate
-    video.score *= video.likes as f64 / video.views as f64;
-    println!("Engagement Rate: {}", video.likes as f64 / video.views as f64);
-
-    match video.state {
-        State::Boosted => video.score *= 2.,
-        State::Private | State::Banned => video.score = 0.,
-        State::Normal => {}
-    }
-
-    //High Video Risk shoud shadow ban the vid by 50-75%
-    match video.security {
-        Security::Sus(factor) | Security::Sus2(factor) => video.score *= 1. - factor as f64,
-        Normal => {}
-    }
-
-    println!("State & Security: {}", video.score);
-
-    let age = SystemTime::now().duration_since(video.upload_at);
-
-    if let Err(err) = age {
-        eprintln!("Error while calculating video age: {err}");
-        return;
-    }
-
-    let age = (age.unwrap().as_secs() / 60 * 2) as f64;
-
-
-    // Viral and non-viral balancing
-    println!("Before balance: {}", video.score);
-    normalize_score(&mut video.score, &viral_score, 0.5);
-    println!("After balance: {}", video.score);
-
-    //Add a small amount of randomness
-   // video.score *= rand::thread_rng().gen_range(0.935..0.950);
-
-    //Make the score smaller for later calculations
-    //video.score /= 3.;
-
-    println!("\n");
-}
-
-fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
-    if *score > *target {
-        *score = *target + (*score - *target) / ((threshold * (*score - *target)) + E).ln();
-    } else {
-        *score = *target - (*target - *score) / ((threshold * (*target - *score)) + E).ln();
-    }
-}
-fn personalize_score(user: User, video: &mut Video) {
-    if let Some(following) = user.following {
-        if following.contains(&video.user) {
-            video.score *= 1.03;
-        }
-    }
-}
-
-struct User<'a> {
-    username: &'a str,
-    liked_videos: Option<Vec<Uuid>>,
-    following: Option<Vec<Uuid>>,
-    watched: Option<Vec<Uuid>>,
-    uuid: Uuid,
-}
-
-impl<'a> User<'a> {
-    fn new(
-        username: &'a str,
-        liked_videos: Option<Vec<Uuid>>,
-        following: Option<Vec<Uuid>>,
-    ) -> Self {
-        User {
-            username,
-            liked_videos,
-            following,
-            watched: None,
-            uuid: Uuid::new_v4(),
-        }
-    }
-}
-
-struct Video {
-    uuid: Uuid,
-    user: Uuid,
-    likes: u32,
-    views: u32,
-    score: f64,
-    security: Security,
-    state: State,
-    upload_at: SystemTime,
-}
-enum State {
-    Normal,
-    Boosted,
-    Banned,
-    Private,
-}
-
-//Change to RiskLevel in code and db
-enum Security {
-    Normal,
-    Sus(f32),
-    Sus2(f32),
-}
-
-impl Video {
-    fn new(user: Uuid, likes: u32, views: u32, security: Security, upload_at: SystemTime) -> Self {
-        Video {
-            uuid: Uuid::new_v4(),
-            user,
-            likes,
-            security,
-            score: 1.0,
-            views,
-            state: State::Normal,
-            upload_at,
-        }
-    }
+    ), VIRAL_SCORE);
 }
