@@ -1,14 +1,14 @@
 use crate::Security::Normal;
 use rand::Rng;
-use std::time::SystemTime;
+use std::{collections::linked_list, f64::consts::E, iter::Scan, time::SystemTime};
 use uuid::Uuid;
 
 fn main() {
     const viral_score: f64 = 350_000.;
     let mut test_vid = Video::new(
         Uuid::new_v4(),
-        100,
-        120,
+        118, //likes
+        340, //views
         Security::Normal,
         SystemTime::now(),
     );
@@ -16,8 +16,8 @@ fn main() {
     println!("{}", test_vid.score);
     let mut test_vid = Video::new(
         Uuid::new_v4(),
-        80,
-        120,
+        200,
+        12_000,
         Security::Normal,
         SystemTime::now(),
     );
@@ -25,17 +25,17 @@ fn main() {
     println!("{}", test_vid.score);
     let mut test_vid = Video::new(
         Uuid::new_v4(),
-        3000,
-        16_000,
-        Security::Normal,
-        SystemTime::now(),
-    );
-    calc_score(&mut test_vid, viral_score);
-    println!("{}", test_vid.score);
-    let mut test_vid = Video::new(
-        Uuid::new_v4(),
-        300,
         0,
+        12,
+        Security::Normal,
+        SystemTime::now(),
+    );
+    calc_score(&mut test_vid, viral_score);
+    println!("{}", test_vid.score);
+    let mut test_vid = Video::new(
+        Uuid::new_v4(),
+        200_000,
+        2_500_000,
         Security::Normal,
         SystemTime::now(),
     );
@@ -57,11 +57,11 @@ fn calc_score(video: &mut Video, viral_score: f64) {
     video.score += (video.likes as f64 / 10.).powf(1.2);
     video.score += (video.views as f64 / 10.).powf(1.09);
 
-    println!("Vidoe score after like/views: {}", video.score);
+    println!("Vid score after like/views: {}", video.score);
 
     //Engagement Rate
     video.score *= video.likes as f64 / video.views as f64;
-    println!("Engagement Rate: {}", video.score);
+    println!("Engagement Rate: {}", video.likes as f64 / video.views as f64);
 
     match video.state {
         State::Boosted => video.score *= 2.,
@@ -88,24 +88,26 @@ fn calc_score(video: &mut Video, viral_score: f64) {
 
 
     // Viral and non-viral balancing
-    let virality = video.score / viral_score; // 1.6
-    let balancer = video.score * (1. - virality);
-    println!("Balancer {balancer}, before: {}, virality: {virality}", video.score);
-
-    if virality < 1. {
-        video.score += balancer;
-    } else {
-        video.score += balancer;
-
-    }
+    println!("Before balance: {}", video.score);
+    normalize_score(&mut video.score, &viral_score, 0.5);
+    println!("After balance: {}", video.score);
 
     //Add a small amount of randomness
-    video.score *= rand::thread_rng().gen_range(0.900..0.950);
+   // video.score *= rand::thread_rng().gen_range(0.935..0.950);
 
     //Make the score smaller for later calculations
     //video.score /= 3.;
+
+    println!("\n");
 }
 
+fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
+    if *score > *target {
+        *score = *target + (*score - *target) / ((threshold * (*score - *target)) + E).ln();
+    } else {
+        *score = *target - (*target - *score) / ((threshold * (*target - *score)) + E).ln();
+    }
+}
 fn personalize_score(user: User, video: &mut Video) {
     if let Some(following) = user.following {
         if following.contains(&video.user) {
