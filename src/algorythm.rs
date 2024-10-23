@@ -1,9 +1,10 @@
-use std::{cmp::Ordering, sync::Arc, time::SystemTime};
+use std::time::SystemTime;
 
 use rand::Rng;
+use serde::Deserialize;
 use uuid::Uuid;
 
-pub fn _next_vid<'a>(user: User, videos: Vec<Video>) -> &'a str {
+pub fn _next_vid<'a>(user: User, videos: Vec<VideoData>) -> &'a str {
     if videos.is_empty() {
         return "No videos present to choose from.";
     }
@@ -12,7 +13,7 @@ pub fn _next_vid<'a>(user: User, videos: Vec<Video>) -> &'a str {
     return "Not implemented";
 }
 
-pub fn calc_score(video: &mut Video, viral_score: f64) {
+pub fn calc_score(video: &mut VideoData, viral_score: f64) {
     video.score = 1.0;
 
     video.score += (video.likes as f64 / 10.).powf(1.2);
@@ -33,7 +34,7 @@ pub fn calc_score(video: &mut Video, viral_score: f64) {
     //Impement video age
     let _age = (age.unwrap().as_secs() / 60 * 2) as f64;
 
-    normalize_score(&mut video.score, &viral_score, 0.005);
+    normalize_score(&mut video.score, &viral_score, 0.9);
 
     match video.state {
         State::Boosted => video.score *= 2.,
@@ -63,7 +64,7 @@ fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
         *score = target * (1.0 - (1.0 - ratio) * (1.0 - threshold));
     }
 }
-pub fn personalize_score(user: User, video: &mut Video) {
+pub fn personalize_score(user: User, video: &mut VideoData) {
     if let Some(following) = user.following {
         if following.contains(&video.user) {
             video.score *= 1.03;
@@ -80,17 +81,17 @@ pub fn personalize_score(user: User, video: &mut Video) {
 
 pub struct User<'a> {
     username: &'a str,
-    liked_videos: Option<Vec<Uuid>>,
-    following: Option<Vec<Uuid>>,
-    watched: Option<Vec<Uuid>>,
+    liked_videos: Option<Vec<String>>,
+    following: Option<Vec<String>>,
+    watched: Option<Vec<String>>,
     uuid: Uuid,
 }
 
 impl<'a> User<'a> {
     fn new(
         username: &'a str,
-        liked_videos: Option<Vec<Uuid>>,
-        following: Option<Vec<Uuid>>,
+        liked_videos: Option<Vec<String>>,
+        following: Option<Vec<String>>,
     ) -> Self {
         User {
             username,
@@ -102,9 +103,10 @@ impl<'a> User<'a> {
     }
 }
 
-pub struct Video {
-    uuid: Uuid,
-    user: Uuid,
+#[derive(Deserialize)]
+pub struct VideoData {
+    uuid: String,
+    user: String,
     likes: u32,
     views: u32,
     score: f64,
@@ -112,6 +114,8 @@ pub struct Video {
     state: State,
     upload_at: SystemTime,
 }
+
+#[derive(Deserialize)]
 pub enum State {
     Normal,
     Boosted,
@@ -120,17 +124,17 @@ pub enum State {
 }
 
 //Change to RiskLevel in code and db
+#[derive(Deserialize)]
 pub enum Security {
     Normal,
     Sus,
     Sus2,
 }
-
-impl Video {
+impl VideoData {
     pub fn new(user: Uuid, likes: u32, views: u32, security: Security, upload_at: SystemTime) -> Self {
-        Video {
-            uuid: Uuid::new_v4(),
-            user,
+        VideoData {
+            uuid: Uuid::new_v4().to_string(),
+            user: user.to_string(),
             likes,
             security,
             score: 1.0,

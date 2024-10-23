@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+axum = "0.7.7"
 chrono = "0.4.38"
 rand = "0.8.5"
+serde = { version = "1.0.213", features = ["derive"] }
+tokio = { version = "1.41.0", features = ["full"] }
 uuid = { version = "1.10.0", features = ["v4"] }
