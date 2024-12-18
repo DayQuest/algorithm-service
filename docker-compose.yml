@@ -1,0 +1,9 @@
+
+services:
+  dayquest-algo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8020:8020"
+    restart: unless-stopped
