@@ -1,7 +1,5 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
 
 const VIRAL_SCORE: f64 = 10_000.;
 
@@ -34,10 +32,10 @@ pub fn calc_score(video: &Video) -> f64 {
         State::Normal => {}
     }
 
-    match &video.security {
-        Security::Sus => score *= 0.5,
-        Security::Sus2 => score *= 0.2,
-        Security::Normal => {}
+    match &video.risk_level {
+        RiskLevel::Sus => score *= 0.5,
+        RiskLevel::Sus2 => score *= 0.2,
+        RiskLevel::Normal => {}
     }
 
     score *= rand::thread_rng().gen_range(0.240..0.250);
@@ -80,23 +78,7 @@ pub struct User<'a> {
     liked_videos: Option<Vec<String>>,
     following: Option<Vec<String>>,
     watched: Option<Vec<String>>,
-    uuid: Uuid,
-}
-
-impl<'a> User<'a> {
-    fn new(
-        username: &'a str,
-        liked_videos: Option<Vec<String>>,
-        following: Option<Vec<String>>,
-    ) -> Self {
-        User {
-            username,
-            liked_videos,
-            following,
-            watched: None,
-            uuid: Uuid::new_v4(),
-        }
-    }
+    uuid: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -106,7 +88,7 @@ pub struct Video {
     pub likes: u32,
     pub views: u32,
     pub score: f64,
-    pub security: Security,
+    pub risk_level: RiskLevel,
     pub state: State,
 }
 
@@ -120,27 +102,8 @@ pub enum State {
 
 //Change to RiskLevel in code and db
 #[derive(Deserialize, Serialize)]
-pub enum Security {
+pub enum RiskLevel {
     Normal,
     Sus,
     Sus2,
-}
-
-impl Video {
-    pub fn new(
-        user: Uuid,
-        likes: u32,
-        views: u32,
-        security: Security,
-    ) -> Self {
-        Self {
-            uuid: Uuid::new_v4().to_string(),
-            user: user.to_string(),
-            likes,
-            security,
-            score: 1.0,
-            views,
-            state: State::Normal,
-        }
-    }
 }

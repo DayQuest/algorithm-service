@@ -1,9 +1,9 @@
+use std::sync::Arc;
 
-use std::fmt::format;
-
-use axum::{routing::post, serve, Router};
+use axum::{routing::post, serve, Extension, Router};
 use env_logger::Builder;
 use log::{info, LevelFilter};
+use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use tokio::net::TcpListener;
 
 mod algorythm;
@@ -16,7 +16,6 @@ async fn main() {
         .format_target(false)
         .init();
 
-
     let ip = "0.0.0.0";
     let port = "8020";
     let addr = format!("{}:{}", ip, port);
@@ -24,13 +23,29 @@ async fn main() {
     let listener = TcpListener::bind(&addr)
         .await
         .expect(format!("Failed to bind to: {addr}").as_str());
+
+    let db_pool = connect_db().await;
+
+    info!("Established connection to database");
     info!("Listening on {addr}");
 
-    serve(listener, create_router())
+    serve(listener, app(db_pool))
         .await
         .expect("Failed to start server");
 }
 
-fn create_router() -> Router {
-    Router::new().route("/score-vid", post(endpoint::video_score))
+fn app(db_pool: MySqlPool) -> Router {
+    Router::new()
+        .route("/score-vid", post(endpoint::video_score))
+        .layer(Extension(Arc::new(db_pool)))
+}
+
+async fn connect_db() -> MySqlPool {
+    let connection_url = "todo";
+
+    MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&connection_url)
+        .await
+        .expect("Failed to establish connection to database")
 }
