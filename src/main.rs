@@ -1,12 +1,13 @@
-use axum::{routing::get, serve, Router};
+
+use std::fmt::format;
+
+use axum::{routing::post, serve, Router};
 use env_logger::Builder;
 use log::{info, LevelFilter};
 use tokio::net::TcpListener;
 
 mod algorythm;
 mod endpoint;
-
-const ADDR: &str = "0.0.0.0:8020";
 
 #[tokio::main]
 async fn main() {
@@ -15,10 +16,15 @@ async fn main() {
         .format_target(false)
         .init();
 
-    let listener = TcpListener::bind(ADDR)
+
+    let ip = "0.0.0.0";
+    let port = "8020";
+    let addr = format!("{}:{}", ip, port);
+
+    let listener = TcpListener::bind(&addr)
         .await
-        .expect(format!("Failed to bind to: {ADDR}").as_str());
-    info!("Listening on {ADDR}");
+        .expect(format!("Failed to bind to: {addr}").as_str());
+    info!("Listening on {addr}");
 
     serve(listener, create_router())
         .await
@@ -26,5 +32,5 @@ async fn main() {
 }
 
 fn create_router() -> Router {
-    Router::new().route("/score-vid", get(endpoint::video_score))
+    Router::new().route("/score-vid", post(endpoint::video_score))
 }

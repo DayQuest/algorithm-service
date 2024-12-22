@@ -1,8 +1,5 @@
-use std::time::SystemTime;
-
-use log::debug;
 use rand::Rng;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 
@@ -16,37 +13,37 @@ pub fn _next_vid<'a>(user: User, videos: Vec<Video>) -> &'a str {
     return "Not implemented";
 }
 
-pub fn calc_score(video: &mut Video) {
-    video.score = 1.0;
+pub fn calc_score(video: &Video) -> f64 {
+    let mut score = 1.;
 
-    video.score += (video.likes as f64 / 10.).powf(1.11);
-    video.score += (video.views as f64 / 10.).powf(1.05);
+    score += (video.likes as f64 / 10.).powf(1.11);
+    score += (video.views as f64 / 10.).powf(1.05);
 
     //Engagement Rate
     if video.views != 0 {
-        video.score *= video.likes as f64 / video.views as f64;
+        score *= video.likes as f64 / video.views as f64;
     }
 
     //TODO: Add video age
 
-    normalize_score(&mut video.score, &VIRAL_SCORE, 0.995);
+    normalize_score(&mut score, &VIRAL_SCORE, 0.995);
 
     match video.state {
-        State::Boosted => video.score *= 2.,
-        State::Private | State::Banned => video.score = 0.,
+        State::Boosted => score *= 2.,
+        State::Private | State::Banned => score = 0.,
         State::Normal => {}
     }
 
     match &video.security {
-        Security::Sus => video.score *= 0.5,
-        Security::Sus2 => video.score *= 0.2,
+        Security::Sus => score *= 0.5,
+        Security::Sus2 => score *= 0.2,
         Security::Normal => {}
     }
 
-    video.score *= rand::thread_rng().gen_range(0.940..0.950);
-    video.score /= 3.;
+    score *= rand::thread_rng().gen_range(0.240..0.250);
+    score /= 3.;
 
-    debug!("Score: {}", video.score);
+    score
 }
 
 fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
@@ -60,19 +57,22 @@ fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
     }
 }
 
-pub fn personalize_score(user: User, video: &mut Video) {
+pub fn personalize_score(user: User, video: &Video) -> f64 {
+    let mut score = video.score;
     if let Some(following) = user.following {
         if following.contains(&video.user) {
-            video.score *= 1.03;
+            score *= 1.03;
         }
     }
 
     //Do not wanna show exact same videos
     if let Some(liked_vids) = user.liked_videos {
         if liked_vids.contains(&video.uuid) {
-            video.score *= 0.96;
+            score *= 0.96;
         }
     }
+
+    score
 }
 
 pub struct User<'a> {
@@ -99,19 +99,18 @@ impl<'a> User<'a> {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Video {
-    uuid: String,
-    user: String,
-    likes: u32,
-    views: u32,
-    score: f64,
-    security: Security,
-    state: State,
-    upload_at: SystemTime,
+    pub uuid: String,
+    pub user: String,
+    pub likes: u32,
+    pub views: u32,
+    pub score: f64,
+    pub security: Security,
+    pub state: State,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub enum State {
     Normal,
     Boosted,
@@ -120,7 +119,7 @@ pub enum State {
 }
 
 //Change to RiskLevel in code and db
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub enum Security {
     Normal,
     Sus,
@@ -133,7 +132,6 @@ impl Video {
         likes: u32,
         views: u32,
         security: Security,
-        upload_at: SystemTime,
     ) -> Self {
         Self {
             uuid: Uuid::new_v4().to_string(),
@@ -143,7 +141,6 @@ impl Video {
             score: 1.0,
             views,
             state: State::Normal,
-            upload_at,
         }
     }
 }
