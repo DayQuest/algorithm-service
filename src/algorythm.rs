@@ -1,9 +1,11 @@
-use rand::Rng;
+use log::debug;
+use rand::{distributions::WeightedIndex, prelude::Distribution, thread_rng, Rng};
 use sqlx::{query_scalar, Error, MySqlPool};
 
 const VIRAL_SCORE: f64 = 10_000.;
+const NEXT_VIDEOS_COUNT: i32 = 15;
 
-pub fn next_videos(user_id: String, options: Vec<Video>) {
+pub fn next_videos<'a>(user: User, videos: Vec<Video>)  {
 
 }
 
@@ -56,7 +58,7 @@ fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
 }
 
 pub fn personalize_score(user: User, video: &Video) -> f64 {
-    let mut score = video.score;
+    let mut score = calc_score(video);
     if user.following.contains(&video.user_id) {
         score *= 1.03;
     }
@@ -69,8 +71,8 @@ pub fn personalize_score(user: User, video: &Video) -> f64 {
     score
 }
 
+#[derive(Clone)]
 pub struct User {
-    pub username: String,
     pub liked_videos: Vec<String>,
     pub following: Vec<String>,
     pub uuid: String,
@@ -78,11 +80,6 @@ pub struct User {
 
 impl User {
     pub async fn from_db(uuid: &String, db_pool: &MySqlPool) -> Result<User, Error> {
-        let username = query_scalar("SELECT username FROM users WHERE uuid = ?")
-            .bind(uuid)
-            .fetch_one(db_pool)
-            .await?;
-
         let liked_videos: Vec<String> =
             query_scalar("SELECT * FROM liked_videos WHERE user_id = ?")
                 .bind(uuid)
@@ -96,7 +93,6 @@ impl User {
                 .await?;
 
         Ok(Self {
-            username,
             liked_videos,
             following,
             uuid: uuid.to_string(),
@@ -104,12 +100,11 @@ impl User {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Debug)]
 pub struct Video {
     pub uuid: String,
     pub user_id: String,
     pub upvotes: u32,
     pub downvotes: u32,
     pub views: u32,
-    pub score: f64,
 }

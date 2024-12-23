@@ -39,7 +39,7 @@ fn app(db_pool: MySqlPool) -> Router {
     Router::new()
         .route("/score-vid", post(endpoint::video_score))
         .route("/personalize-score", post(endpoint::personalize_score))
-        .route("/next-videos", post(endpoint::next_video))
+        .route("/next-videos", post(endpoint::next_videos))
         .layer(Extension(Arc::new(db_pool)))
 }
 

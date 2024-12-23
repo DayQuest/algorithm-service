@@ -95,5 +95,5 @@ pub async fn next_videos(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Json(payload): Json<NextVideosRequest>,
 ) -> Result<Json<NextVideosResponse>, StatusCode> {
-        
+        Ok(Json(NextVideosResponse {videos: vec![]}))
 }
