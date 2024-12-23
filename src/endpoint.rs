@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{http::StatusCode, Extension, Json};
+use axum::{debug_handler, http::StatusCode, Extension, Json};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, MySqlPool};
@@ -17,9 +17,10 @@ pub struct ScoreVideoRequest {
     uuid: String,
 }
 
+#[debug_handler]
 pub async fn video_score(
-    Json(payload): Json<ScoreVideoRequest>,
     Extension(db_pool): Extension<Arc<MySqlPool>>,
+    Json(payload): Json<ScoreVideoRequest>,
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
     match query_as::<_, Video>("SELECT * FROM video WHERE uuid = ?")
         .bind(&payload.uuid)
