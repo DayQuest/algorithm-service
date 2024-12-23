@@ -3,18 +3,14 @@ use sqlx::{query_scalar, Error, MySqlPool};
 
 const VIRAL_SCORE: f64 = 10_000.;
 
-pub fn _next_vid<'a>(_user: User, videos: Vec<Video>) -> &'a str {
-    if videos.is_empty() {
-        return "No videos present to choose from.";
-    }
+pub fn next_videos(user_id: String, options: Vec<Video>) {
 
-    return "Not implemented";
 }
 
 pub fn calc_score(video: &Video) -> f64 {
     let mut score = 1.;
 
-    score += (video.upvotes as f64 / 10.).powf(1.11);
+    score += (video.upvotes as f64 / 10.).powf(1.09);
     score += (video.views as f64 / 10.).powf(1.05);
 
     if video.views != 0 {
@@ -34,7 +30,7 @@ pub fn calc_score(video: &Video) -> f64 {
 
     // TODO: Add video age
 
-    normalize_score(&mut score, &VIRAL_SCORE, 0.995);
+    normalize_score(&mut score, &VIRAL_SCORE, 0.986);
 
     /*match &video.risk_level {
         RiskLevel::Sus => score *= 0.5,
@@ -42,7 +38,7 @@ pub fn calc_score(video: &Video) -> f64 {
         RiskLevel::Normal => {}
     }*/
 
-    score *= rand::thread_rng().gen_range(0.240..0.250);
+    score *= rand::thread_rng().gen_range(0.245..0.257);
     score /= 3.;
 
     score
@@ -81,29 +77,29 @@ pub struct User {
 }
 
 impl User {
-    pub async fn from_db(uuid: String, db_pool: MySqlPool) -> Result<User, Error> {
+    pub async fn from_db(uuid: &String, db_pool: &MySqlPool) -> Result<User, Error> {
         let username = query_scalar("SELECT username FROM users WHERE uuid = ?")
-            .bind(&uuid)
-            .fetch_one(&db_pool)
+            .bind(uuid)
+            .fetch_one(db_pool)
             .await?;
 
         let liked_videos: Vec<String> =
             query_scalar("SELECT * FROM liked_videos WHERE user_id = ?")
-                .bind(&uuid)
-                .fetch_all(&db_pool)
+                .bind(uuid)
+                .fetch_all(db_pool)
                 .await?;
 
         let following: Vec<String> =
             query_scalar("SELECT * FROM user_followed_users WHERE user_uuid = ?")
-                .bind(&uuid)
-                .fetch_all(&db_pool)
+                .bind(uuid)
+                .fetch_all(db_pool)
                 .await?;
 
         Ok(Self {
             username,
             liked_videos,
             following,
-            uuid,
+            uuid: uuid.to_string(),
         })
     }
 }

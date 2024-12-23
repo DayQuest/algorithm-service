@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::{process::exit, sync::Arc};
 
+use algorythm::Video;
 use axum::{routing::post, serve, Extension, Router};
 use env_logger::Builder;
-use log::{info, LevelFilter};
+use log::{debug, info, LevelFilter};
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use tokio::net::TcpListener;
 
@@ -37,6 +38,8 @@ async fn main() {
 fn app(db_pool: MySqlPool) -> Router {
     Router::new()
         .route("/score-vid", post(endpoint::video_score))
+        .route("/personalize-score", post(endpoint::personalize_score))
+        .route("/next-videos", post(endpoint::next_video))
         .layer(Extension(Arc::new(db_pool)))
 }
 
