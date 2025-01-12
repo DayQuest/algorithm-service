@@ -1,6 +1,9 @@
-use std::sync::Arc;
 
-use sqlx::{mysql::MySqlRow, query, query_scalar, Error, MySqlPool};
+use sqlx::{query_scalar, Error, MySqlPool};
+
+pub trait DatabaseModel<T> {
+    async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<T, Error>;
+}
 
 #[derive(Clone)]
 pub struct User {
@@ -9,8 +12,8 @@ pub struct User {
     pub uuid: String,
 }
 
-impl User {
-    pub async fn from_db(uuid: &String, db_pool: &MySqlPool) -> Result<Self, Error> {
+impl DatabaseModel<User> for User {
+    async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Self, Error> {
         let liked_videos: Vec<String> =
             query_scalar("SELECT * FROM liked_videos WHERE user_id = ?")
                 .bind(uuid)
@@ -31,7 +34,7 @@ impl User {
     }
 }
 
-#[derive(sqlx::FromRow, Debug)]
+#[derive(Clone)]
 pub struct Video {
     pub uuid: String,
     pub user_id: String,
@@ -40,4 +43,10 @@ pub struct Video {
     pub views: u32,
     pub comments: u32,
     pub viewtime_seconds: u64,
+}
+
+impl DatabaseModel<Video> for Video {
+    async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Video, Error> {
+        todo!()
+    }
 }

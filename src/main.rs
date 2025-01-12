@@ -1,7 +1,7 @@
-use std::{process::exit, sync::Arc, thread, time::Duration};
+use std::{process::exit, sync::{Arc, Mutex}, thread, time::Duration};
 
 use algorithm::score_video;
-use axum::{routing::post, serve, Extension, Router};
+use axum::{routing::{get, post}, serve, Extension, Router};
 use config::Config;
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
@@ -32,29 +32,31 @@ async fn main() {
     debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 0, downvotes: 0, views: 2, comments: 0, viewtime_seconds: 4 }, &config));
     debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 20_000, downvotes: 180, views: 1_000_000, comments: 30_000, viewtime_seconds: 2_000_000 },&config));
     debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 93_000, downvotes: 350, views: 1_800_000, comments: 1785, viewtime_seconds: 2_700_000 }, &config));
-    exit(0);
+
 
     let listener = TcpListener::bind(&addr)
         .await
         .expect(format!("Failed to bind to: {addr}").as_str());
 
-    let db_pool = connect_db().await;
+    //let db_pool = connect_db().await;
 
-    info!("Established connection to database");
+    //info!("Established connection to database");
     info!("Listening on {addr}");
 
-    serve(listener, app(db_pool, config))
+    serve(listener, app(config))
         .await
         .expect("Failed to start server");
 }
 
-fn app(db_pool: MySqlPool, config: Config) -> Router {
+fn app(config: Config) -> Router {
     Router::new()
-        .route("/score-vid", post(endpoint::video_score))
-        .route("/personalize-score", post(endpoint::personalize_score))
-        .route("/next-videos", post(endpoint::next_videos))
-        .layer(Extension(Arc::new(db_pool)))
-        .layer(Extension(Arc::new(config)))
+        .route("/scoreVid", post(endpoint::video_score))
+        .route("/personalizeScore", post(endpoint::personalize_score))
+        .route("/nextVideos", post(endpoint::next_videos))
+        .route("/getConfig", get(endpoint::get_config))
+        .route("/setConfig", post(endpoint::set_config))
+       // .layer(Extension(Arc::new(db_pool)))
+        .layer(Extension(Arc::new(Mutex::new(config))))
 }
 
 async fn connect_db() -> MySqlPool {

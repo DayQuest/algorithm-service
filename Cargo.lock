@@ -344,7 +344,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dayquest_aglorythm"
+name = "dayquest_aglorithm"
 version = "0.1.0"
 dependencies = [
  "axum",

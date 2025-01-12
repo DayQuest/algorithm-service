@@ -1,12 +1,20 @@
-use figment::{providers::{Format, Json}, Figment};
+use std::{
+    fs::{self, File},
+    io::{Error, Write},
+};
+
+use figment::{
+    providers::{Format, Json},
+    Figment,
+};
 use log::info;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use tokio::fs::read;
 
-
+const FILE_PATH: &str = "config.json";
 
 pub fn load() -> Config {
-    let config = Figment::new()
-    .merge(Json::file("config.json"));
+    let config = Figment::new().merge(Json::file(FILE_PATH));
 
     let config: Config = config.extract().expect("Failed to load config..");
 
@@ -14,7 +22,21 @@ pub fn load() -> Config {
     config
 }
 
-#[derive(Deserialize)]
+pub fn overwrite(content: String) -> Result<(), Error> {
+    fs::remove_file(FILE_PATH)?;
+
+    let mut file = File::options()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(FILE_PATH)
+        .unwrap();
+
+    file.write_all(content.as_bytes())?;
+    Ok(())
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     pub config_name: String,
     pub viral_score: f64,
