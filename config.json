@@ -1,0 +1,14 @@
+{
+  "config_name": "alpha_developing_testing",
+
+  "viral_score": 1000.0,
+  "upvote_exponent": 1.09,
+  "view_exponent": 1.04,
+  "upvote_2_totalvotes_ratio_exponent": 1.2,
+  "normalize_threshold": 0.986,
+
+  "viewer_following_creator_multiply": 1.03,
+  "viewer_liked_video_multiply": 0.96,
+
+  "next_videos_amount": 15
+}

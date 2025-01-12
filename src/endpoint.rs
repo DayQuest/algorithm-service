@@ -5,7 +5,7 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, Error, MySqlPool};
 
-use crate::algorithm::{self, User, Video};
+use crate::{algorithm, config::Config, model::{User, Video}};
 
 async fn retrieve_video(video_id: &String, db_pool: &MySqlPool) -> Result<Video, Error> {
     let video = query_as::<_, Video>("SELECT * FROM video WHERE uuid = ?")
@@ -29,11 +29,12 @@ pub struct ScoreVideoRequest {
 #[debug_handler]
 pub async fn video_score(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
+    Extension(config): Extension<Arc<Config>>,
     Json(payload): Json<ScoreVideoRequest>,
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
     match retrieve_video(&payload.uuid, &db_pool).await {
         Ok(video) => {
-            let score = algorithm::calc_score(&video);
+            let score = algorithm::score_video(&video, &config);
             info!("Calculated {}'s score: {}", payload.uuid, score);
             Ok(Json(ScoreVideoResponse { score }))
         }
@@ -58,12 +59,13 @@ pub struct PersonalizeVideoRequest {
 #[debug_handler]
 pub async fn personalize_score(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
+    Extension(config): Extension<Arc<Config>>,
     Json(payload): Json<PersonalizeVideoRequest>,
 ) -> Result<Json<PersonalizeScoreResponse>, StatusCode> {
     match retrieve_video(&payload.video_id, &db_pool).await {
         Ok(video) => match User::from_db(&payload.user_id, &db_pool).await {
             Ok(user) => {
-                let score = algorithm::personalize_score(user, &video);
+                let score = algorithm::personalize_score(user, &video, &config);
                 Ok(Json(PersonalizeScoreResponse { score }))
             },
 
@@ -97,3 +99,4 @@ pub async fn next_videos(
 ) -> Result<Json<NextVideosResponse>, StatusCode> {
         Ok(Json(NextVideosResponse {videos: vec![]}))
 }
+

@@ -1,14 +1,18 @@
-use std::{process::exit, sync::Arc};
+use std::{process::exit, sync::Arc, thread, time::Duration};
 
-use algorithm::Video;
+use algorithm::score_video;
 use axum::{routing::post, serve, Extension, Router};
+use config::Config;
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
+use model::Video;
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use tokio::net::TcpListener;
 
 mod algorithm;
 mod endpoint;
+mod config;
+mod model;
 
 #[tokio::main]
 async fn main() {
@@ -17,11 +21,17 @@ async fn main() {
         .format_target(false)
         .init();
 
+    let config = config::load();
+   
     let ip = "0.0.0.0";
     let port = "8020";
     let addr = format!("{}:{}", ip, port);
 
-    
+
+    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 12, downvotes: 1, views: 111, comments: 2, viewtime_seconds: 220 }, &config));
+    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 0, downvotes: 0, views: 2, comments: 0, viewtime_seconds: 4 }, &config));
+    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 20_000, downvotes: 180, views: 1_000_000, comments: 30_000, viewtime_seconds: 2_000_000 },&config));
+    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 93_000, downvotes: 350, views: 1_800_000, comments: 1785, viewtime_seconds: 2_700_000 }, &config));
     exit(0);
 
     let listener = TcpListener::bind(&addr)
@@ -33,17 +43,18 @@ async fn main() {
     info!("Established connection to database");
     info!("Listening on {addr}");
 
-    serve(listener, app(db_pool))
+    serve(listener, app(db_pool, config))
         .await
         .expect("Failed to start server");
 }
 
-fn app(db_pool: MySqlPool) -> Router {
+fn app(db_pool: MySqlPool, config: Config) -> Router {
     Router::new()
         .route("/score-vid", post(endpoint::video_score))
         .route("/personalize-score", post(endpoint::personalize_score))
         .route("/next-videos", post(endpoint::next_videos))
         .layer(Extension(Arc::new(db_pool)))
+        .layer(Extension(Arc::new(config)))
 }
 
 async fn connect_db() -> MySqlPool {
