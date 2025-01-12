@@ -27,13 +27,7 @@ async fn main() {
     let port = "8020";
     let addr = format!("{}:{}", ip, port);
 
-
-    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 12, downvotes: 1, views: 111, comments: 2, viewtime_seconds: 220 }, &config));
-    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 0, downvotes: 0, views: 2, comments: 0, viewtime_seconds: 4 }, &config));
-    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 20_000, downvotes: 180, views: 1_000_000, comments: 30_000, viewtime_seconds: 2_000_000 },&config));
-    debug!("{}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 93_000, downvotes: 350, views: 1_800_000, comments: 1785, viewtime_seconds: 2_700_000 }, &config));
-
-
+    test_video_score(&config);
     let listener = TcpListener::bind(&addr)
         .await
         .expect(format!("Failed to bind to: {addr}").as_str());
@@ -67,4 +61,13 @@ async fn connect_db() -> MySqlPool {
         .connect(&connection_url)
         .await
         .expect("Failed to establish connection to database")
+}
+
+
+fn test_video_score(config: &Config) {
+    debug!("Video Score Testing:");
+    debug!("    - {}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 12, downvotes: 1, views: 111, comments: 2, viewtime_seconds: 220 }, &config));
+    debug!("    - {}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 0, downvotes: 1, views: 2, comments: 0, viewtime_seconds: 4 }, &config));
+    debug!("    - {}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 20_000, downvotes: 180, views: 1_000_000, comments: 30_000, viewtime_seconds: 2_000_000 },&config));
+    debug!("    - {}", score_video(&Video { uuid: "".into(), user_id: "".into(), upvotes: 93_000, downvotes: 350, views: 1_800_000, comments: 1785, viewtime_seconds: 2_700_000 }, &config));
 }

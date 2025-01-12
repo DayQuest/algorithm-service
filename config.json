@@ -1,6 +1,6 @@
 {
-  "config_name": "alpha_developing_testing-v1",
-  "next_videos_amount": 15.0,
+  "config_name": "developing_V1",
+  "next_videos_amount": 15,
   "normalize_threshold": 0.986,
   "upvote_2_totalvotes_ratio_exponent": 1.2,
   "upvote_exponent": 1.09,

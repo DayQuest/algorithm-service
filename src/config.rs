@@ -9,7 +9,6 @@ use figment::{
 };
 use log::info;
 use serde::{Deserialize, Serialize};
-use tokio::fs::read;
 
 const FILE_PATH: &str = "config.json";
 
@@ -46,5 +45,5 @@ pub struct Config {
     pub normalize_threshold: f64,
     pub viewer_following_creator_multiply: f64,
     pub viewer_liked_video_multiply: f64,
-    pub next_videos_amount: f64,
+    pub next_videos_amount: u32,
 }
