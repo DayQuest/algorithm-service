@@ -1,13 +1,13 @@
 use std::{process::exit, sync::Arc};
 
-use algorythm::Video;
+use algorithm::Video;
 use axum::{routing::post, serve, Extension, Router};
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use tokio::net::TcpListener;
 
-mod algorythm;
+mod algorithm;
 mod endpoint;
 
 #[tokio::main]
@@ -20,6 +20,9 @@ async fn main() {
     let ip = "0.0.0.0";
     let port = "8020";
     let addr = format!("{}:{}", ip, port);
+
+    
+    exit(0);
 
     let listener = TcpListener::bind(&addr)
         .await

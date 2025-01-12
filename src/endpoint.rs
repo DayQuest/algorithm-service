@@ -5,7 +5,7 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, Error, MySqlPool};
 
-use crate::algorythm::{self, User, Video};
+use crate::algorithm::{self, User, Video};
 
 async fn retrieve_video(video_id: &String, db_pool: &MySqlPool) -> Result<Video, Error> {
     let video = query_as::<_, Video>("SELECT * FROM video WHERE uuid = ?")
@@ -33,7 +33,7 @@ pub async fn video_score(
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
     match retrieve_video(&payload.uuid, &db_pool).await {
         Ok(video) => {
-            let score = algorythm::calc_score(&video);
+            let score = algorithm::calc_score(&video);
             info!("Calculated {}'s score: {}", payload.uuid, score);
             Ok(Json(ScoreVideoResponse { score }))
         }
@@ -63,7 +63,7 @@ pub async fn personalize_score(
     match retrieve_video(&payload.video_id, &db_pool).await {
         Ok(video) => match User::from_db(&payload.user_id, &db_pool).await {
             Ok(user) => {
-                let score = algorythm::personalize_score(user, &video);
+                let score = algorithm::personalize_score(user, &video);
                 Ok(Json(PersonalizeScoreResponse { score }))
             },
 
