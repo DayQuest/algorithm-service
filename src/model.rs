@@ -1,5 +1,6 @@
-
-use sqlx::{query_scalar, Error, MySqlPool};
+use sqlx::{
+    query, query_scalar, Error, MySqlPool, Row,
+};
 
 pub trait DatabaseModel<T> {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<T, Error>;
@@ -47,6 +48,28 @@ pub struct Video {
 
 impl DatabaseModel<Video> for Video {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Video, Error> {
-        todo!()
+        let video_row =
+            query("SELECT user_id, up_votes, down_votes, views, viewtime_seconds FROM video WHERE uuid = ?")
+                .bind(uuid)
+                .fetch_one(db_pool)
+                .await?;
+
+        let comments = query("SELECT * FROM comment WHERE video_id = ?")
+            .bind(uuid)
+            .fetch_all(db_pool)
+            .await?
+            .len();
+
+        let video = Self {
+            uuid: uuid.into(),
+            user_id: video_row.try_get("user_id")?,
+            upvotes: video_row.try_get("up_votes")?,
+            downvotes: video_row.try_get("down_votes")?,
+            views: video_row.try_get("views")?,
+            comments: comments as u32,
+            viewtime_seconds: video_row.try_get("viewtime_seconds")?,
+        };
+
+        Ok(video)
     }
 }
