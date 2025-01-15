@@ -5,7 +5,7 @@ use crate::{
     database::{self, User, Video},
 };
 
-pub async fn next_videos<'a>(
+pub async fn next_videos(
     user: &User,
     config: &Config,
     db_pool: &MySqlPool,
@@ -16,11 +16,12 @@ pub async fn next_videos<'a>(
     let fetched_videos =
         database::get_random_videos(config.next_videos_amount, false, db_pool).await?;
 
-    let personalized_video_scores = fetched_videos
+    let _personalized_video_scores = fetched_videos
         .iter()
         .map(|video| score_video_personalized(&user, video, config))
         .collect::<Vec<f64>>();
     
+
     Ok(vec![])
 }
 

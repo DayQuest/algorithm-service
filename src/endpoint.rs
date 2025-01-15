@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use axum::{debug_handler, http::StatusCode, Extension, Json};
+use axum::{http::StatusCode, Extension, Json};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

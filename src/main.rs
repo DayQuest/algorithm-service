@@ -1,22 +1,26 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    env,
+    sync::{Arc, Mutex},
+};
 
 use algorithm::score_video;
 use axum::{
+    middleware,
     routing::{get, post},
     serve, Extension, Router,
 };
-use config::Config;
-use dotenv::dotenv;
+use config::{Config, DATABASE_CONN_URL_KEY};
+use database::Video;
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
-use database::Video;
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use tokio::net::TcpListener;
 
 mod algorithm;
+mod auth;
 mod config;
-mod endpoint;
 mod database;
+mod endpoint;
 
 #[tokio::main]
 async fn main() {
@@ -26,7 +30,6 @@ async fn main() {
         .init();
 
     let config = config::load();
-    dotenv().expect("Failed to load .env");
 
     let ip = "0.0.0.0";
     let port = "8020";
@@ -48,19 +51,25 @@ async fn main() {
 }
 
 fn app(config: Config, db_pool: MySqlPool) -> Router {
-    Router::new()
+    let jwt_router = Router::new()
         .route("/scoreVideo", post(endpoint::score_video))
         .route("/scoreVideoPersonalized", post(endpoint::score_video_personalized))
         .route("/nextVideos", post(endpoint::next_videos))
+        .layer(middleware::from_fn(auth::jwt_middleware));
+
+    let internal_router = Router::new()
         .route("/getConfig", get(endpoint::get_config))
         .route("/setConfig", post(endpoint::set_config))
+        .layer(middleware::from_fn(auth::internal_secret_middleware));
+
+    Router::merge(jwt_router, internal_router)
         .layer(Extension(Arc::new(db_pool)))
         .layer(Extension(Arc::new(Mutex::new(config))))
 }
 
 async fn connect_db() -> MySqlPool {
-    let connection_url =
-        dotenv::var("DATABASE_CONNECTION_URL").expect("Failed to get database connection url");
+    let connection_url = env::var(DATABASE_CONN_URL_KEY)
+        .expect("Failed to get database connection url out of environment");
 
     MySqlPoolOptions::new()
         .max_connections(5)
