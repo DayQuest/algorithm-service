@@ -22,7 +22,7 @@ pub struct ScoreVideoRequest {
     uuid: String,
 }
 
-#[debug_handler]
+//#[debug_handler]
 pub async fn score_video(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Config>>,
@@ -52,7 +52,7 @@ pub struct PersonalizeVideoRequest {
     video_id: String,
 }
 
-#[debug_handler]
+//#[debug_handler]
 pub async fn score_video_personalized(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Config>>,
@@ -88,7 +88,7 @@ pub struct NextVideosResponse {
     videos: Vec<String>, //Vec of UUIDs of videos
 }
 
-#[debug_handler]
+//#[debug_handler]
 pub async fn next_videos(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,
@@ -109,7 +109,7 @@ pub async fn next_videos(
     Ok(Json(NextVideosResponse { videos }))
 }
 
-#[debug_handler]
+//#[debug_handler]
 pub async fn get_config(
     Extension(config): Extension<Arc<Mutex<Config>>>,
 ) -> Result<Json<Config>, StatusCode> {
@@ -121,7 +121,7 @@ pub struct SetConfigRequest {
     uuid: String,
 }
 
-#[debug_handler]
+//#[debug_handler]
 pub async fn set_config(
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<Config>,
