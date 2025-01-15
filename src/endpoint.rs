@@ -4,12 +4,12 @@ use axum::{debug_handler, http::StatusCode, Extension, Json};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{query_as, Error, MySqlPool};
+use sqlx::MySqlPool;
 
 use crate::{
     algorithm,
     config::{self, Config},
-    model::{DatabaseModel, User, Video},
+    database::{DatabaseModel, User, Video},
 };
 
 #[derive(Deserialize, Serialize)]
@@ -23,7 +23,7 @@ pub struct ScoreVideoRequest {
 }
 
 #[debug_handler]
-pub async fn video_score(
+pub async fn score_video(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Config>>,
     Json(payload): Json<ScoreVideoRequest>,
@@ -53,7 +53,7 @@ pub struct PersonalizeVideoRequest {
 }
 
 #[debug_handler]
-pub async fn personalize_score(
+pub async fn score_video_personalized(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Config>>,
     Json(payload): Json<PersonalizeVideoRequest>,
@@ -61,7 +61,7 @@ pub async fn personalize_score(
     match Video::from_db(&payload.video_id, &db_pool).await {
         Ok(video) => match User::from_db(&payload.user_id, &db_pool).await {
             Ok(user) => {
-                let score = algorithm::personalize_score(user, &video, &config);
+                let score = algorithm::score_video_personalized(&user, &video, &config);
                 Ok(Json(PersonalizeScoreResponse { score }))
             }
 
@@ -80,20 +80,33 @@ pub async fn personalize_score(
 
 #[derive(Deserialize, Serialize)]
 pub struct NextVideosRequest {
-    uuid: String,
+    user_id: String,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct NextVideosResponse {
-    videos: Vec<String>,
+    videos: Vec<String>, //Vec of UUIDs of videos
 }
 
 #[debug_handler]
 pub async fn next_videos(
-    // Extension(db_pool): Extension<Arc<MySqlPool>>,
+    Extension(db_pool): Extension<Arc<MySqlPool>>,
+    Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<NextVideosRequest>,
 ) -> Result<Json<NextVideosResponse>, StatusCode> {
-    Ok(Json(NextVideosResponse { videos: vec![] }))
+    let config = config.lock().unwrap().clone();
+    let user = User::from_db(&payload.user_id, &db_pool)
+        .await
+        .or_else(|_| Err(StatusCode::NOT_FOUND))?;
+
+    let videos = algorithm::next_videos(&user, &config, &db_pool)
+        .await
+        .or_else(|_| Err(StatusCode::INTERNAL_SERVER_ERROR))?
+        .iter()
+        .map(|video| video.uuid.clone())
+        .collect::<Vec<String>>();
+
+    Ok(Json(NextVideosResponse { videos }))
 }
 
 #[debug_handler]
