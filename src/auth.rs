@@ -1,5 +1,3 @@
-
-use std::env;
 use axum::body::Body;
 use axum::http::header::AUTHORIZATION;
 use axum::http::Request;
@@ -17,12 +15,17 @@ use jsonwebtoken::Header;
 use jsonwebtoken::Validation;
 use serde::Deserialize;
 use serde::Serialize;
+use std::env;
 
 use crate::config::INTERNAL_SECRET_KEY;
 use crate::config::JWT_SECRET_KEY;
 
 pub fn _gen_token(user_id: String) -> Result<String, Error> {
-    let encoding_key = EncodingKey::from_secret(env::var(JWT_SECRET_KEY).expect("Failed to get jwt secret").as_ref());
+    let encoding_key = EncodingKey::from_secret(
+        env::var(JWT_SECRET_KEY)
+            .expect("Failed to get jwt secret")
+            .as_ref(),
+    );
     let claims = Claims {
         user_id,
         iat: Utc::now().timestamp() as usize,
@@ -32,11 +35,14 @@ pub fn _gen_token(user_id: String) -> Result<String, Error> {
     encode(&Header::default(), &claims, &encoding_key)
 }
 
-
 pub fn extract_claims(token: &str) -> Result<Claims, Error> {
     let claims = decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(env::var(JWT_SECRET_KEY).expect("Failed to get jwt secret").as_ref()),
+        &DecodingKey::from_secret(
+            env::var(JWT_SECRET_KEY)
+                .expect("Failed to get jwt secret")
+                .as_ref(),
+        ),
         &Validation::default(),
     )?
     .claims;
@@ -55,13 +61,7 @@ pub async fn jwt_middleware(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response<Body>, StatusCode> {
-    let auth_header = request
-        .headers()
-        .get(AUTHORIZATION)
-        .and_then(|header| header.to_str().ok())
-        .and_then(|header| header.strip_prefix("Bearer "));
-
-    let auth_header = auth_header.ok_or(StatusCode::UNAUTHORIZED)?;
+    let auth_header = extract_auth_header(&request).ok_or(StatusCode::UNAUTHORIZED)?;
 
     let claims = match extract_claims(auth_header) {
         Ok(claims) => claims,
@@ -77,17 +77,19 @@ pub async fn internal_secret_middleware(
     request: Request<Body>,
     next: Next,
 ) -> Result<Response<Body>, StatusCode> {
-    let auth_header = request
-        .headers()
-        .get(AUTHORIZATION)
-        .and_then(|header| header.to_str().ok())
-        .and_then(|header| header.strip_prefix("Bearer "));
+    let auth_header = extract_auth_header(&request).ok_or(StatusCode::UNAUTHORIZED)?;
 
-    let auth_header = auth_header.ok_or(StatusCode::UNAUTHORIZED)?;
-    
     if !auth_header.eq(&env::var(INTERNAL_SECRET_KEY).unwrap()) {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
     Ok(next.run(request).await)
+}
+
+fn extract_auth_header<'a>(request: &'a Request<Body>) -> Option<&'a str> {
+    request
+        .headers()
+        .get(AUTHORIZATION)
+        .and_then(|header| header.to_str().ok())
+        .and_then(|header| header.strip_prefix("Bearer "))
 }
