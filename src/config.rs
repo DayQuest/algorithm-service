@@ -64,7 +64,7 @@ pub struct Config {
     pub view_exponent: f64,
     pub upvote_2_totalvotes_ratio_exponent: f64,
     pub normalize_threshold: f64,
-    pub viewer_following_creator_multiply: f64,
-    pub viewer_liked_video_multiply: f64,
+    pub viewer_following_creator_multiplier: f64,
+    pub viewer_liked_video_multiplier: f64,
     pub next_videos_amount: u32,
 }

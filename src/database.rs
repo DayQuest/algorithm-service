@@ -49,6 +49,9 @@ pub struct Video {
     pub views: u32,
     pub comments: u32,
     pub viewtime_seconds: u64,
+
+    //Not saved in the database, a variable to set later
+    pub score: f64,
 }
 
 impl DatabaseModel<Video> for Video {
@@ -72,6 +75,7 @@ impl DatabaseModel<Video> for Video {
             views: row.try_get(VIDEO_VIEWS_COLUMN)?,
             comments: comment_count(uuid.into(), db_pool).await?,
             viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
+            score: 0.,
         };
 
         Ok(video)
@@ -119,6 +123,7 @@ pub async fn get_random_videos(
             views: row.try_get(VIDEO_VIEWS_COLUMN)?,
             comments: 0,
             viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
+            score: 0.,
         })
     })
     .collect::<Result<Vec<Video>, Error>>()?;

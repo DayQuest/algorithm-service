@@ -1,5 +1,6 @@
 use std::{
     env,
+    process::exit,
     sync::{Arc, Mutex},
 };
 
@@ -9,6 +10,7 @@ use axum::{
     routing::{get, post},
     serve, Extension, Router,
 };
+use colored::Colorize;
 use config::{Config, DATABASE_CONN_URL_KEY};
 use database::Video;
 use env_logger::Builder;
@@ -24,6 +26,12 @@ mod endpoint;
 
 #[tokio::main]
 async fn main() {
+    ctrlc::set_handler(move || {
+        info!("{}", "Stopping server, Bye :)".on_red());
+        exit(0);
+    })
+    .expect("Error setting Ctrl-C handler");
+
     Builder::new()
         .filter_level(LevelFilter::Debug)
         .format_target(false)
@@ -43,18 +51,20 @@ async fn main() {
 
     let db_pool = connect_db().await;
 
-    info!("Established connection to database");
     info!("Listening on {addr}");
 
-    serve(listener, app(config, db_pool))
+    serve(listener, app(config, Some(db_pool)))
         .await
         .expect("Failed to start server");
 }
 
-fn app(config: Config, db_pool: MySqlPool) -> Router {
+fn app(config: Config, db_pool: Option<MySqlPool>) -> Router {
     let jwt_router = Router::new()
         .route("/scoreVideo", post(endpoint::score_video))
-        .route("/scoreVideoPersonalized", post(endpoint::score_video_personalized))
+        .route(
+            "/scoreVideoPersonalized",
+            post(endpoint::score_video_personalized),
+        )
         .route("/nextVideos", post(endpoint::next_videos))
         .layer(middleware::from_fn(auth::jwt_middleware));
 
@@ -63,20 +73,31 @@ fn app(config: Config, db_pool: MySqlPool) -> Router {
         .route("/setConfig", post(endpoint::set_config))
         .layer(middleware::from_fn(auth::internal_secret_middleware));
 
-    Router::merge(jwt_router, internal_router)
-        .layer(Extension(Arc::new(db_pool)))
-        .layer(Extension(Arc::new(Mutex::new(config))))
+    let mut final_router =
+        Router::merge(jwt_router, internal_router).layer(Extension(Arc::new(Mutex::new(config))));
+
+    // Only add db_pool if it's Some
+    if let Some(pool) = db_pool {
+        final_router = final_router.layer(Extension(Arc::new(pool)));
+    } else {
+        debug!("Not connecting to database!")
+    }
+
+    final_router
 }
 
 async fn connect_db() -> MySqlPool {
     let connection_url = env::var(DATABASE_CONN_URL_KEY)
         .expect("Failed to get database connection url out of environment");
 
-    MySqlPoolOptions::new()
+    let pool = MySqlPoolOptions::new()
         .max_connections(5)
         .connect(&connection_url)
         .await
-        .expect("Failed to connect to database")
+        .expect("Failed to connect to database");
+
+    info!("Established connection to database");
+    pool
 }
 
 fn test_video_score(config: &Config) {
@@ -91,7 +112,8 @@ fn test_video_score(config: &Config) {
                 downvotes: 1,
                 views: 111,
                 comments: 2,
-                viewtime_seconds: 220
+                viewtime_seconds: 220,
+                score: 0.
             },
             &config
         )
@@ -106,7 +128,8 @@ fn test_video_score(config: &Config) {
                 downvotes: 1,
                 views: 2,
                 comments: 0,
-                viewtime_seconds: 4
+                viewtime_seconds: 4,
+                score: 0.
             },
             &config
         )
@@ -121,7 +144,8 @@ fn test_video_score(config: &Config) {
                 downvotes: 180,
                 views: 1_000_000,
                 comments: 30_000,
-                viewtime_seconds: 2_000_000
+                viewtime_seconds: 2_000_000,
+                score: 0.
             },
             &config
         )
@@ -136,7 +160,8 @@ fn test_video_score(config: &Config) {
                 downvotes: 350,
                 views: 1_800_000,
                 comments: 1785,
-                viewtime_seconds: 2_700_000
+                viewtime_seconds: 2_700_000,
+                score: 0.
             },
             &config
         )
