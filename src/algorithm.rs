@@ -26,7 +26,7 @@ pub async fn next_videos(
         .into_iter()
         .map(|mut video| {
             video.score = score_video_personalized(user, &video, config);
-            video // Return the owned `Video`
+            video
         })
         .collect::<Vec<Video>>();
 
