@@ -28,6 +28,7 @@ async fn main() {
         .filter_level(LevelFilter::Debug)
         .format_target(false)
         .init();
+    info!("Starting..");
 
     let config = config::load();
 
