@@ -59,6 +59,7 @@ pub fn overwrite(content: String) -> Result<(), Error> {
 pub struct Config {
     pub config_name: String,
     pub viral_score: f64,
+    pub high_score_video_probability: f64,
     pub upvote_exponent: f64,
     pub view_exponent: f64,
     pub upvote_2_totalvotes_ratio_exponent: f64,

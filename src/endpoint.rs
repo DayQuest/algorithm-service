@@ -22,7 +22,7 @@ pub struct ScoreVideoRequest {
     uuid: String,
 }
 
-//#[debug_handler]
+//#[debug_handler] 
 pub async fn score_video(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Config>>,
@@ -31,7 +31,6 @@ pub async fn score_video(
     match Video::from_db(&payload.uuid, &db_pool).await {
         Ok(video) => {
             let score = algorithm::score_video(&video, &config);
-            info!("Calculated {}'s score: {}", payload.uuid, score);
             Ok(Json(ScoreVideoResponse { score }))
         }
         Err(why) => {
