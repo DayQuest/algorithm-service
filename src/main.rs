@@ -1,7 +1,7 @@
 use std::{
     env,
     process::exit,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex}, time::Instant,
 };
 
 use axum::{
@@ -24,6 +24,7 @@ mod endpoint;
 
 #[tokio::main]
 async fn main() {
+    let start_time = Instant::now();
     ctrlc::set_handler(move || {
         info!("{}", "Stopping server, Bye :)".on_red());
         exit(0);
@@ -49,7 +50,7 @@ async fn main() {
 
     let db_pool = connect_db().await;
 
-    info!("Listening on {addr}");
+    info!("Listening on {addr}, ({} ms)", Instant::elapsed(&start_time).as_millis());
 
     serve(listener, app(config, Some(db_pool)))
         .await
