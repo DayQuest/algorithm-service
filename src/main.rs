@@ -4,7 +4,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use algorithm::score_video;
 use axum::{
     middleware,
     routing::{get, post},
@@ -12,7 +11,6 @@ use axum::{
 };
 use colored::Colorize;
 use config::{Config, DATABASE_CONN_URL_KEY};
-use database::Video;
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
@@ -45,7 +43,6 @@ async fn main() {
     let port = "8020";
     let addr = format!("{}:{}", ip, port);
 
-    test_video_score(&config);
     let listener = TcpListener::bind(&addr)
         .await
         .expect(format!("Failed to bind to: {addr}").as_str());
@@ -99,72 +96,4 @@ async fn connect_db() -> MySqlPool {
 
     info!("Established connection to database");
     pool
-}
-
-fn test_video_score(config: &Config) {
-    debug!("Video Score Testing:");
-    debug!(
-        "    - {}",
-        score_video(
-            &Video {
-                uuid: "".into(),
-                user_id: "".into(),
-                upvotes: 12,
-                downvotes: 1,
-                views: 111,
-                comments: 2,
-                viewtime_seconds: 220,
-                score: 0.
-            },
-            &config
-        )
-    );
-    debug!(
-        "    - {}",
-        score_video(
-            &Video {
-                uuid: "".into(),
-                user_id: "".into(),
-                upvotes: 0,
-                downvotes: 1,
-                views: 2,
-                comments: 0,
-                viewtime_seconds: 4,
-                score: 0.
-            },
-            &config
-        )
-    );
-    debug!(
-        "    - {}",
-        score_video(
-            &Video {
-                uuid: "".into(),
-                user_id: "".into(),
-                upvotes: 20_000,
-                downvotes: 180,
-                views: 1_000_000,
-                comments: 30_000,
-                viewtime_seconds: 2_000_000,
-                score: 0.
-            },
-            &config
-        )
-    );
-    debug!(
-        "    - {}",
-        score_video(
-            &Video {
-                uuid: "".into(),
-                user_id: "".into(),
-                upvotes: 93_000,
-                downvotes: 350,
-                views: 1_800_000,
-                comments: 1785,
-                viewtime_seconds: 2_700_000,
-                score: 0.
-            },
-            &config
-        )
-    );
 }
