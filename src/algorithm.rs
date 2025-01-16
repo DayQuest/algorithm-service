@@ -19,7 +19,7 @@ pub async fn next_videos(
     //TODO: Personalized score the videos
     //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
     let fetched_videos =
-        database::get_random_videos(config.next_videos_amount, false, db_pool).await?;
+        database::get_random_videos(config.next_videos_fetch_amount, false, db_pool).await?;
 
     //Score Videos
     let mut scored_personalized_videos = fetched_videos
@@ -36,6 +36,9 @@ pub async fn next_videos(
     let mut final_sort: Vec<Video> = Vec::new();
 
     for (i, _) in scored_personalized_videos.iter().enumerate() {
+        if i >= config.next_videos_amount.try_into().unwrap() {
+            break;
+        }
         if random_bool(config.high_score_video_probability) {
             //Put a high scored video in
             let video = scored_personalized_videos

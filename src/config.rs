@@ -55,6 +55,23 @@ pub fn overwrite(content: String) -> Result<(), Error> {
     Ok(())
 }
 
+//Just most important things
+pub fn validate(c: &Config) -> Result<(), &str>{
+    if c.next_videos_amount > c.next_videos_fetch_amount {
+        return Err("Next Video amount must be higher than the Next Video Fetch Amount!");
+    }
+
+    if c.viral_score <= 0. {
+        return Err("Viral Score must be higher than 0.00");
+    }
+
+    if c.high_score_video_probability <= 0. {
+        return Err("High Score Prob. must be higher than 0.00");
+    }
+
+    Ok(())
+}
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     pub config_name: String,
@@ -67,4 +84,6 @@ pub struct Config {
     pub viewer_following_creator_multiplier: f64,
     pub viewer_liked_video_multiplier: f64,
     pub next_videos_amount: u32,
+    pub next_videos_fetch_amount: u32,
 }
+

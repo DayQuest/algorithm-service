@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use axum::{http::StatusCode, Extension, Json};
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::MySqlPool;
@@ -140,6 +140,10 @@ pub async fn set_config(
         }
     }
 
+    if let Err(why) = config::validate(&payload) {
+        warn!("Config set request denied. Validation failed: {why}");
+        return Ok(StatusCode::NOT_ACCEPTABLE);
+    }
     *config.lock().unwrap() = payload;
     info!("Updated config!");
     Ok(StatusCode::OK)

@@ -39,6 +39,7 @@ async fn main() {
     info!("Starting..");
 
     let config = config::load();
+    config::validate(&config).expect("Config validation failed");
 
     let ip = "0.0.0.0";
     let port = "8020";
