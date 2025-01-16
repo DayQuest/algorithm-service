@@ -76,7 +76,7 @@ fn app(config: Config, db_pool: Option<MySqlPool>) -> Router {
     let mut final_router =
         Router::merge(jwt_router, internal_router).layer(Extension(Arc::new(Mutex::new(config))));
 
-    // Only add db_pool if it's Some
+    // Gives option to not use a database for testing single functions
     if let Some(pool) = db_pool {
         final_router = final_router.layer(Extension(Arc::new(pool)));
     } else {
