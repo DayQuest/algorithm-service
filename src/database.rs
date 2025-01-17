@@ -19,26 +19,26 @@ pub struct User {
 
 impl DatabaseModel<User> for User {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Self, Error> {
-        let liked_videos: Vec<String> = query(&format!(
-            "SELECT {VIDEO_ID_COLUMN} FROM {DB_LIKED_VIDEOS_TABLE} WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
-        ))
-        .bind(uuid)
-        .fetch_all(db_pool)
-        .await?
-        .iter()
-        .filter_map(|row| row.try_get::<String, _>(0).ok())
-        .collect();
+        let liked_videos: Vec<String> = query("SELECT ? FROM ? WHERE ? = UUID_TO_BIN(?)")
+            .bind(VIDEO_ID_COLUMN)
+            .bind(DB_LIKED_VIDEOS_TABLE)
+            .bind(USER_ID_COLUMN)
+            .bind(uuid)
+            .fetch_all(db_pool)
+            .await?
+            .iter()
+            .filter_map(|row| row.try_get::<String, _>(0).ok())
+            .collect();
 
-        //user_uuid may be changed to user_id
-        let following: Vec<String> = query(&format!(
-            "SELECT {FOLLOWED_USERS_COLUMN} FROM {DB_USER_FOLLOWED_USER_TABLE} WHERE user_uuid = UUID_TO_BIN(?)"
-        ))
-        .bind(uuid)
-        .fetch_all(db_pool)
-        .await?
-        .iter()
-        .filter_map(|row| row.try_get::<String, _>(0).ok())
-        .collect();
+        let following: Vec<String> = query("SELECT ? FROM ? WHERE user_uuid = UUID_TO_BIN(?)")
+            .bind(FOLLOWED_USERS_COLUMN)
+            .bind(DB_USER_FOLLOWED_USER_TABLE)
+            .bind(uuid)
+            .fetch_all(db_pool)
+            .await?
+            .iter()
+            .filter_map(|row| row.try_get::<String, _>(0).ok())
+            .collect();
 
         Ok(Self {
             liked_videos,
@@ -56,19 +56,24 @@ pub struct Video {
     pub views: i32,
     pub comments: i32,
     pub viewtime_seconds: i64,
-
-    //Not saved in the database, a variable to set later
     pub score: f64,
 }
 
 impl DatabaseModel<Video> for Video {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Video, Error> {
-        let row = query(&format!(
-            "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = UUID_TO_BIN(?) AND {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS};"
-        ))
-        .bind(uuid)
-        .fetch_one(db_pool)
-        .await?;
+        let row = query("SELECT ?, ?, ?, ?, ? FROM ? WHERE ? = UUID_TO_BIN(?) AND ? = ?")
+            .bind(USER_ID_COLUMN)
+            .bind(VIDEO_UP_VOTES_COLUMN)
+            .bind(VIDEO_DOWN_VOTES_COLUMN)
+            .bind(VIDEO_VIEWS_COLUMN)
+            .bind(VIDEO_VIEWTIME_COLUMN)
+            .bind(DB_VIDEO_TABLE)
+            .bind(UUID_COLUMN)
+            .bind(uuid)
+            .bind(VIDEO_STATUS_COLUMN)
+            .bind(VIDEO_READY_STATUS)
+            .fetch_one(db_pool)
+            .await?;
 
         let video = Self {
             uuid: uuid.into(),
@@ -86,46 +91,47 @@ impl DatabaseModel<Video> for Video {
 }
 
 async fn comment_count(uuid: &str, db_pool: &MySqlPool) -> Result<i32, Error> {
-    let count: (i32,) = sqlx::query_as(&format!(
-        "SELECT COUNT(*) FROM {DB_COMMENT_TABLE} WHERE {VIDEO_ID_COLUMN} = UUID_TO_BIN(?);"
-    ))
-    .bind(uuid)
-    .fetch_one(db_pool)
-    .await?;
+    let count: (i32,) = sqlx::query_as("SELECT COUNT(*) FROM ? WHERE ? = UUID_TO_BIN(?)")
+        .bind(DB_COMMENT_TABLE)
+        .bind(VIDEO_ID_COLUMN)
+        .bind(uuid)
+        .fetch_one(db_pool)
+        .await?;
 
     Ok(count.0)
 }
 
-/// Fetches {amount} of videos randomly from the database using 1 query only.
-/// if with_comment_count is activated it will move trough the fetched vec and get each
-/// comment count with a query for that video and writes that to the mutable video vec. This operation
-/// costs a bit because it has to send an extra query for every video. If set on false only one query
-/// for everything is needed. So only enable when really needed!
 pub async fn get_random_videos(
     amount: i32,
     with_comment_count: bool,
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Error> {
-    let mut videos = sqlx::query(&format!(
-        "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS} ORDER BY RAND() LIMIT UUID_TO_BIN(?);"
-    ))
-    .bind(amount)
-    .fetch_all(db_pool)
-    .await?
-    .iter()
-    .map(|row| {
-        Ok(Video {
-            uuid: Uuid::from_slice(row.try_get(UUID_COLUMN)?).unwrap().to_string(),
-            user_id: row.try_get(USER_ID_COLUMN)?,
-            upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
-            downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
-            views: row.try_get(VIDEO_VIEWS_COLUMN)?,
-            comments: 0,
-            viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
-            score: 0.,   
+    let mut videos = sqlx::query("SELECT ?, ?, ?, ?, ? FROM ? WHERE ? = ? ORDER BY RAND() LIMIT ?")
+        .bind(USER_ID_COLUMN)
+        .bind(VIDEO_UP_VOTES_COLUMN)
+        .bind(VIDEO_DOWN_VOTES_COLUMN)
+        .bind(VIDEO_VIEWS_COLUMN)
+        .bind(VIDEO_VIEWTIME_COLUMN)
+        .bind(DB_VIDEO_TABLE)
+        .bind(VIDEO_STATUS_COLUMN)
+        .bind(VIDEO_READY_STATUS)
+        .bind(amount)
+        .fetch_all(db_pool)
+        .await?
+        .iter()
+        .map(|row| {
+            Ok(Video {
+                uuid: Uuid::from_slice(row.try_get(UUID_COLUMN)?).unwrap().to_string(),
+                user_id: row.try_get(USER_ID_COLUMN)?,
+                upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
+                downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
+                views: row.try_get(VIDEO_VIEWS_COLUMN)?,
+                comments: 0,
+                viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
+                score: 0.,   
+            })
         })
-    })
-    .collect::<Result<Vec<Video>, Error>>()?;
+        .collect::<Result<Vec<Video>, Error>>()?;
 
     if with_comment_count {
         for video in &mut videos {
