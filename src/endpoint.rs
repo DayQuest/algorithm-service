@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use axum::{http::StatusCode, Extension, Json};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::MySqlPool;
@@ -28,6 +28,7 @@ pub async fn score_video(
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<ScoreVideoRequest>,
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
+    debug!("{}", payload.uuid);
     match Video::from_db(&payload.uuid, &db_pool).await {
         Ok(video) => {
             let score = algorithm::score_video(&video, &config.lock().unwrap());

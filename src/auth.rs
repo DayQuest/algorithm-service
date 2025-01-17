@@ -20,7 +20,7 @@ use std::env;
 use crate::config::INTERNAL_SECRET_KEY;
 use crate::config::JWT_SECRET_KEY;
 
-pub fn _gen_token(user_id: String) -> Result<String, Error> {
+pub fn gen_token(user_id: String) -> Result<String, Error> {
     let encoding_key = EncodingKey::from_secret(
         env::var(JWT_SECRET_KEY)
             .expect("Failed to get jwt secret")

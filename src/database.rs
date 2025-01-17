@@ -57,11 +57,7 @@ pub struct Video {
 impl DatabaseModel<Video> for Video {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Video, Error> {
         let row = query(&format!(
-            "SELECT {USER_ID_COLUMN}, 
-            {VIDEO_UP_VOTES_COLUMN}, 
-            {VIDEO_DOWN_VOTES_COLUMN}, 
-            {VIDEO_VIEWS_COLUMN}, 
-            {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = ? AND {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS};"
+            "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = ? AND {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS};"
         ))
         .bind(uuid)
         .fetch_one(db_pool)
@@ -104,11 +100,7 @@ pub async fn get_random_videos(
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Error> {
     let mut videos = sqlx::query(&format!(
-        "SELECT {USER_ID_COLUMN}, 
-            {VIDEO_UP_VOTES_COLUMN}, 
-            {VIDEO_DOWN_VOTES_COLUMN}, 
-            {VIDEO_VIEWS_COLUMN}, 
-            {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS} ORDER BY RAND() LIMIT ?;"
+        "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS} ORDER BY RAND() LIMIT ?;"
     ))
     .bind(amount)
     .fetch_all(db_pool)
@@ -117,7 +109,7 @@ pub async fn get_random_videos(
     .map(|row| {
         Ok(Video {
             uuid: row.try_get(UUID_COLUMN)?,
-         user_id: row.try_get(USER_ID_COLUMN)?,
+            user_id: row.try_get(USER_ID_COLUMN)?,
             upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
             downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
             views: row.try_get(VIDEO_VIEWS_COLUMN)?,

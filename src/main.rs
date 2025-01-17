@@ -39,7 +39,7 @@ async fn main() {
         .format_target(false)
         .init();
     info!("Starting..");
-    testing::debug();
+    debug!("JWT: {}", auth::gen_token("testing".to_string()).unwrap());
     let config = config::load();
     config::validate(&config).expect("Config validation failed");
 
