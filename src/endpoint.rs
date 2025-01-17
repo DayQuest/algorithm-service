@@ -97,14 +97,14 @@ pub async fn next_videos(
     let user = User::from_db(&payload.user_id, &db_pool)
         .await
         .or_else(|why| {
-            warn!("Next Videos not successful: {why}");
+            warn!("Fetching user failed: {why}");
            return Err(StatusCode::NOT_FOUND);
         })?;
 
     let videos = algorithm::next_videos(&user, &config, &db_pool)
         .await
         .or_else(|why| {
-            warn!("Next Videos Algorithm failed!: {why}");
+            warn!("Next Videos Algorithm failed: {why}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         })?
         .iter()
