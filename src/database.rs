@@ -108,7 +108,7 @@ pub async fn get_random_videos(
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Error> {
     let mut videos = sqlx::query(&format!(
-        "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = ? ORDER BY RAND() LIMIT ?;"
+        "SELECT {UUID_COLUMN}, {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = ? ORDER BY RAND() LIMIT ?;"
     ))
     .bind(VIDEO_READY_STATUS)
     .bind(amount)
@@ -118,7 +118,7 @@ pub async fn get_random_videos(
     .map(|row| {
         Ok(Video {
             uuid: Uuid::from_slice(row.try_get(UUID_COLUMN)?).unwrap().to_string(),
-            user_id: row.try_get(USER_ID_COLUMN)?,
+            user_id: Uuid::from_slice(row.try_get(USER_ID_COLUMN)?).unwrap().to_string(),
             upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
             downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
             views: row.try_get(VIDEO_VIEWS_COLUMN)?,
