@@ -96,15 +96,15 @@ pub async fn next_videos(
     let config = config.lock().unwrap().clone();
     let user = User::from_db(&payload.user_id, &db_pool)
         .await
-        .or_else(|_| {
-            warn!("Next Videos not successful: User not found: {}", payload.user_id);
+        .or_else(|why| {
+            warn!("Next Videos not successful: {why}");
            return Err(StatusCode::NOT_FOUND);
         })?;
 
     let videos = algorithm::next_videos(&user, &config, &db_pool)
         .await
-        .or_else(|_| {
-            error!("Next Videos Algorithm failed!");
+        .or_else(|why| {
+            warn!("Next Videos Algorithm failed!: {why}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         })?
         .iter()

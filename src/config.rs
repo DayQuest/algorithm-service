@@ -21,7 +21,7 @@ pub const HOST_PORT_KEY: &str = "HOST_PORT";
 pub const DB_VIDEO_TABLE: &str = "video";
 pub const DB_COMMENT_TABLE: &str = "comment";
 pub const DB_LIKED_VIDEOS_TABLE: &str = "liked_videos";
-pub const DB_USER_FOLLOWED_USER_TABLE: &str = "user_followed_user";
+pub const DB_USER_FOLLOWED_USER_TABLE: &str = "user_followed_users";
 
 //Columns
 pub const USER_ID_COLUMN: &str = "user_id";
