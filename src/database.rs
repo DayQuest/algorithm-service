@@ -41,7 +41,7 @@ impl DatabaseModel<User> for User {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Video {
     pub uuid: String,
     pub user_id: String,
