@@ -38,7 +38,7 @@ async fn main() {
         .format_target(false)
         .init();
     info!("Starting..");
-
+    testing::debug();
     let config = config::load();
     config::validate(&config).expect("Config validation failed");
 

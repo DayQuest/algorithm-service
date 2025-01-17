@@ -25,12 +25,12 @@ pub struct ScoreVideoRequest {
 //#[debug_handler] 
 pub async fn score_video(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
-    Extension(config): Extension<Arc<Config>>,
+    Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<ScoreVideoRequest>,
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
     match Video::from_db(&payload.uuid, &db_pool).await {
         Ok(video) => {
-            let score = algorithm::score_video(&video, &config);
+            let score = algorithm::score_video(&video, &config.lock().unwrap());
             Ok(Json(ScoreVideoResponse { score }))
         }
         Err(why) => {
@@ -54,13 +54,13 @@ pub struct PersonalizeVideoRequest {
 //#[debug_handler]
 pub async fn score_video_personalized(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
-    Extension(config): Extension<Arc<Config>>,
+    Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<PersonalizeVideoRequest>,
 ) -> Result<Json<PersonalizeScoreResponse>, StatusCode> {
     match Video::from_db(&payload.video_id, &db_pool).await {
         Ok(video) => match User::from_db(&payload.user_id, &db_pool).await {
             Ok(user) => {
-                let score = algorithm::score_video_personalized(&user, &video, &config);
+                let score = algorithm::score_video_personalized(&user, &video, &config.lock().unwrap());
                 Ok(Json(PersonalizeScoreResponse { score }))
             }
 
