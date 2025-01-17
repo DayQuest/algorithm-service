@@ -4,6 +4,7 @@ use crate::{
     config::Config,
     database::{self, User, Video},
 };
+use log::debug;
 use rand::Rng;
 use sqlx::MySqlPool;
 
@@ -21,7 +22,7 @@ pub async fn next_videos(
     //TODO: Personalized score the videos
     //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
     let fetched_videos =
-        database::get_random_videos(config.next_videos_fetch_amount as i32, true, db_pool).await?;
+        database::get_random_videos(config.next_videos_fetch_amount as i32, db_pool).await?;
 
     //Score Videos
     let mut scored_personalized_videos = fetched_videos
@@ -37,6 +38,7 @@ pub async fn next_videos(
 
     let mut final_sort: Vec<Video> = Vec::new();
 
+    let mut high_score_video_chosen = 0;
     for (i, _) in scored_personalized_videos.iter().enumerate() {
         if i >= config.next_videos_amount.try_into().unwrap() {
             break;
@@ -44,9 +46,11 @@ pub async fn next_videos(
         if random_bool(config.high_score_video_probability) {
             //Put a high scored video in
             let video = scored_personalized_videos
-                .get(scored_personalized_videos.len() - i)
+                .get(scored_personalized_videos.len() - high_score_video_chosen - 1)
                 .unwrap();
+            debug!("i: {i}, len: {}", scored_personalized_videos.len());
             final_sort.push(video.clone());
+            high_score_video_chosen += 1;
         } else {
             final_sort.push(scored_personalized_videos.get(i).unwrap().clone());
         }
@@ -93,6 +97,7 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
     }
 
     normalize_score(&mut score, &config.viral_score, config.normalize_threshold);
+
     score
 }
 

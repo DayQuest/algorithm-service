@@ -7,7 +7,8 @@ use uuid::Uuid;
 use crate::config::{
     DB_COMMENT_TABLE, DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE,
     FOLLOWED_USERS_COLUMN, USER_ID_COLUMN, UUID_COLUMN, VIDEO_DOWN_VOTES_COLUMN, VIDEO_ID_COLUMN,
-    VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN, VIDEO_STATUS_COLUMN, VIDEO_READY_STATUS
+    VIDEO_READY_STATUS, VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN,
+    VIDEO_VIEWTIME_COLUMN,
 };
 
 pub trait DatabaseModel<T> {
@@ -76,7 +77,9 @@ impl DatabaseModel<Video> for Video {
 
         let video = Self {
             uuid: uuid.into(),
-            user_id: Uuid::from_slice(row.try_get(USER_ID_COLUMN)?).unwrap().to_string(),
+            user_id: Uuid::from_slice(row.try_get(USER_ID_COLUMN)?)
+                .unwrap()
+                .to_string(),
             upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
             downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
             views: row.try_get(VIDEO_VIEWS_COLUMN)?,
@@ -100,46 +103,46 @@ async fn comment_count(uuid: &str, db_pool: &MySqlPool) -> Result<i32, Error> {
     Ok(count.0)
 }
 
-/// Fetches {amount} of videos randomly from the database using 1 query only.
-/// if with_comment_count is activated it will move trough the fetched vec and get each
-/// comment count with a query for that video and writes that to the mutable video vec. This operation
-/// costs a bit because it has to send an extra query for every video. If set on false only one query
-/// for everything is needed. So only enable when really needed!
-pub async fn get_random_videos(
-    amount: i32,
-    with_comment_count: bool,
-    db_pool: &MySqlPool,
-) -> Result<Vec<Video>, Error> {
+pub async fn get_random_videos(amount: i32, db_pool: &MySqlPool) -> Result<Vec<Video>, Error> {
     let start_time = Instant::now();
-    let mut videos = sqlx::query(&format!(
-        "SELECT {UUID_COLUMN}, {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = ? ORDER BY RAND() LIMIT ?;"
+
+    let videos = sqlx::query(&format!(
+        "SELECT {UUID_COLUMN}, {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN},
+                {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN}, COUNT({VIDEO_ID_COLUMN}) AS comment_count
+         FROM {DB_VIDEO_TABLE}
+         LEFT JOIN {DB_COMMENT_TABLE} 
+            ON {DB_COMMENT_TABLE}.{VIDEO_ID_COLUMN} = {DB_VIDEO_TABLE}.{UUID_COLUMN}
+         WHERE {VIDEO_STATUS_COLUMN} = ?
+         GROUP BY {DB_VIDEO_TABLE}.{UUID_COLUMN}
+         ORDER BY RAND() 
+         LIMIT ?"
     ))
-    .bind(VIDEO_READY_STATUS)
-    .bind(amount)
-    .fetch_all(db_pool)
-    .await?
-    .iter()
-    .map(|row| {
-        Ok(Video {
-            uuid: Uuid::from_slice(row.try_get(UUID_COLUMN)?).unwrap().to_string(),
-            user_id: Uuid::from_slice(row.try_get(USER_ID_COLUMN)?).unwrap().to_string(),
-            upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
-            downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
-            views: row.try_get(VIDEO_VIEWS_COLUMN)?,
-            comments: 0,
-            viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
-            score: 0.,   
+        .bind(VIDEO_READY_STATUS)
+        .bind(amount)
+        .fetch_all(db_pool)
+        .await?
+        .iter()
+        .map(|row| {
+            Ok(Video {
+                uuid: Uuid::from_slice(row.try_get(UUID_COLUMN)?)
+                    .unwrap()
+                    .to_string(),
+                user_id: Uuid::from_slice(row.try_get(USER_ID_COLUMN)?)
+                    .unwrap()
+                    .to_string(),
+                upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
+                downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
+                views: row.try_get(VIDEO_VIEWS_COLUMN)?,
+                comments: row.try_get::<i32, _>("comment_count").unwrap_or(0),
+                viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
+                score: 0.,
+            })
         })
-    })
-    .collect::<Result<Vec<Video>, Error>>()?;
+        .collect::<Result<Vec<Video>, Error>>()?;
 
-    if with_comment_count {
-        for video in &mut videos {
-            video.comments = comment_count(&video.uuid, db_pool).await?;
-        }
-    }
-
-
-    debug!("Fetching videos took: {} ms", Instant::elapsed(&start_time).as_millis());
+    debug!(
+        "Fetching videos took: {} ms",
+        Instant::elapsed(&start_time).as_millis()
+    );
     Ok(videos)
 }

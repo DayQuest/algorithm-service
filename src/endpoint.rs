@@ -104,7 +104,7 @@ pub async fn next_videos(
     let videos = algorithm::next_videos(&user, &config, &db_pool)
         .await
         .or_else(|why| {
-            warn!("Next Videos Algorithm failed: {why}");
+            error!("Next Videos Algorithm failed: {why}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         })?
         .iter()
