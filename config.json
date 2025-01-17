@@ -1,10 +1,8 @@
 {
   "config_name": "developing_V1",
+  "high_score_video_probability": 0.1,
   "next_videos_amount": 15,
   "next_videos_fetch_amount": 25,
-  "high_score_split": 3,
-  "UNUSED_matching_topic_threshold": 0.6,
-  "high_score_video_probability": 0.1,
   "normalize_threshold": 0.986,
   "upvote_2_totalvotes_ratio_exponent": 1.2,
   "upvote_exponent": 1.09,

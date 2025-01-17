@@ -127,6 +127,11 @@ pub async fn set_config(
 ) -> Result<StatusCode, StatusCode> {
     info!("Config update was requested");
 
+    if let Err(why) = config::validate(&payload) {
+        warn!("Config set request denied. Validation failed: {why}");
+        return Ok(StatusCode::NOT_ACCEPTABLE);
+    }
+
     match serde_json::to_string_pretty(&json!(payload)) {
         Ok(json) => {
             if let Err(why) = config::overwrite(json) {
@@ -140,10 +145,6 @@ pub async fn set_config(
         }
     }
 
-    if let Err(why) = config::validate(&payload) {
-        warn!("Config set request denied. Validation failed: {why}");
-        return Ok(StatusCode::NOT_ACCEPTABLE);
-    }
     *config.lock().unwrap() = payload;
     info!("Updated config!");
     Ok(StatusCode::OK)
