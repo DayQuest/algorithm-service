@@ -26,6 +26,10 @@ pub const USER_ID_COLUMN: &str = "user_id";
 pub const FOLLOWED_USERS_COLUMN: &str = "followed_users";
 pub const UUID_COLUMN: &str = "uuid";
 
+//Video Status
+pub const VIDEO_STATUS_COLUMN: &str = "status";
+pub const VIDEO_READY_STATUS: &str = "3";
+
 pub const VIDEO_ID_COLUMN: &str = "video_id";
 pub const VIDEO_UP_VOTES_COLUMN: &str = "up_votes";
 pub const VIDEO_DOWN_VOTES_COLUMN: &str = "down_votes";

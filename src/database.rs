@@ -3,7 +3,7 @@ use sqlx::{query, query_scalar, Error, MySqlPool, Row};
 use crate::config::{
     DB_COMMENT_TABLE, DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE,
     FOLLOWED_USERS_COLUMN, USER_ID_COLUMN, UUID_COLUMN, VIDEO_DOWN_VOTES_COLUMN, VIDEO_ID_COLUMN,
-    VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN,
+    VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN, VIDEO_STATUS_COLUMN, VIDEO_READY_STATUS
 };
 
 pub trait DatabaseModel<T> {
@@ -61,7 +61,7 @@ impl DatabaseModel<Video> for Video {
             {VIDEO_UP_VOTES_COLUMN}, 
             {VIDEO_DOWN_VOTES_COLUMN}, 
             {VIDEO_VIEWS_COLUMN}, 
-            {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = ?;"
+            {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = ? AND {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS};"
         ))
         .bind(uuid)
         .fetch_one(db_pool)
@@ -108,7 +108,7 @@ pub async fn get_random_videos(
             {VIDEO_UP_VOTES_COLUMN}, 
             {VIDEO_DOWN_VOTES_COLUMN}, 
             {VIDEO_VIEWS_COLUMN}, 
-            {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} ORDER BY RAND() LIMIT ?;"
+            {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS} ORDER BY RAND() LIMIT ?;"
     ))
     .bind(amount)
     .fetch_all(db_pool)
@@ -117,13 +117,13 @@ pub async fn get_random_videos(
     .map(|row| {
         Ok(Video {
             uuid: row.try_get(UUID_COLUMN)?,
-            user_id: row.try_get(USER_ID_COLUMN)?,
+         user_id: row.try_get(USER_ID_COLUMN)?,
             upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
             downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
             views: row.try_get(VIDEO_VIEWS_COLUMN)?,
             comments: 0,
             viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
-            score: 0.,
+            score: 0.,   
         })
     })
     .collect::<Result<Vec<Video>, Error>>()?;
