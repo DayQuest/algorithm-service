@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use axum::{http::StatusCode, Extension, Json};
-use log::{debug, error, info, warn};
+use axum::{debug_handler, http::StatusCode, Extension, Json};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::MySqlPool;
@@ -28,7 +28,6 @@ pub async fn score_video(
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<ScoreVideoRequest>,
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
-    debug!("{}", payload.uuid);
     match Video::from_db(&payload.uuid, &db_pool).await {
         Ok(video) => {
             let score = algorithm::score_video(&video, &config.lock().unwrap());
@@ -52,7 +51,7 @@ pub struct PersonalizeVideoRequest {
     video_id: String,
 }
 
-//#[debug_handler]
+#[debug_handler]
 pub async fn score_video_personalized(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,

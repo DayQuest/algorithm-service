@@ -1,4 +1,5 @@
 use sqlx::{query, query_scalar, Error, MySqlPool, Row};
+use uuid::Uuid;
 
 use crate::config::{
     DB_COMMENT_TABLE, DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE,
@@ -19,7 +20,7 @@ pub struct User {
 impl DatabaseModel<User> for User {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Self, Error> {
         let liked_videos: Vec<String> = query_scalar(&format!(
-            "SELECT {VIDEO_ID_COLUMN} FROM {DB_LIKED_VIDEOS_TABLE} WHERE {USER_ID_COLUMN} = ?"
+            "SELECT {VIDEO_ID_COLUMN} FROM {DB_LIKED_VIDEOS_TABLE} WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
         ))
         .bind(uuid)
         .fetch_all(db_pool)
@@ -27,7 +28,7 @@ impl DatabaseModel<User> for User {
 
         //user_uuid may be changed to user_id
         let following: Vec<String> = query_scalar(&format!(
-            "SELECT {FOLLOWED_USERS_COLUMN} FROM {DB_USER_FOLLOWED_USER_TABLE} WHERE user_uuid = ?"
+            "SELECT {FOLLOWED_USERS_COLUMN} FROM {DB_USER_FOLLOWED_USER_TABLE} WHERE user_uuid = UUID_TO_BIN(?)"
         ))
         .bind(uuid)
         .fetch_all(db_pool)
@@ -57,7 +58,7 @@ pub struct Video {
 impl DatabaseModel<Video> for Video {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Video, Error> {
         let row = query(&format!(
-            "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = ? AND {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS};"
+            "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = UUID_TO_BIN(?) AND {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS};"
         ))
         .bind(uuid)
         .fetch_one(db_pool)
@@ -65,11 +66,11 @@ impl DatabaseModel<Video> for Video {
 
         let video = Self {
             uuid: uuid.into(),
-            user_id: row.try_get(USER_ID_COLUMN)?,
+            user_id: Uuid::from_slice(row.try_get(USER_ID_COLUMN)?).unwrap().to_string(),
             upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
             downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
             views: row.try_get(VIDEO_VIEWS_COLUMN)?,
-            comments: comment_count(uuid.into(), db_pool).await?,
+            comments: comment_count(uuid, db_pool).await?,
             viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
             score: 0.,
         };
@@ -78,9 +79,9 @@ impl DatabaseModel<Video> for Video {
     }
 }
 
-async fn comment_count(uuid: String, db_pool: &MySqlPool) -> Result<u32, Error> {
+async fn comment_count(uuid: &str, db_pool: &MySqlPool) -> Result<u32, Error> {
     let count: (i64,) = sqlx::query_as(&format!(
-        "SELECT COUNT(*) FROM {DB_COMMENT_TABLE} WHERE {VIDEO_ID_COLUMN} = ?;"
+        "SELECT COUNT(*) FROM {DB_COMMENT_TABLE} WHERE {VIDEO_ID_COLUMN} = UUID_TO_BIN(?);"
     ))
     .bind(uuid)
     .fetch_one(db_pool)
@@ -100,7 +101,7 @@ pub async fn get_random_videos(
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Error> {
     let mut videos = sqlx::query(&format!(
-        "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS} ORDER BY RAND() LIMIT ?;"
+        "SELECT {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = {VIDEO_READY_STATUS} ORDER BY RAND() LIMIT UUID_TO_BIN(?);"
     ))
     .bind(amount)
     .fetch_all(db_pool)
@@ -108,7 +109,7 @@ pub async fn get_random_videos(
     .iter()
     .map(|row| {
         Ok(Video {
-            uuid: row.try_get(UUID_COLUMN)?,
+            uuid: Uuid::from_slice(row.try_get(UUID_COLUMN)?).unwrap().to_string(),
             user_id: row.try_get(USER_ID_COLUMN)?,
             upvotes: row.try_get(VIDEO_UP_VOTES_COLUMN)?,
             downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
@@ -122,7 +123,7 @@ pub async fn get_random_videos(
 
     if with_comment_count {
         for video in &mut videos {
-            video.comments = comment_count(video.uuid.clone(), db_pool).await?;
+            video.comments = comment_count(&video.uuid, db_pool).await?;
         }
     }
 

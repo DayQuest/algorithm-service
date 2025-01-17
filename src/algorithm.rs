@@ -1,9 +1,12 @@
+use std::error::Error;
+
 use crate::{
     config::Config,
     database::{self, User, Video},
 };
 use rand::Rng;
-use sqlx::{Error, MySqlPool};
+use sqlx::MySqlPool;
+
 
 fn random_bool(probability_true: f64) -> bool {
     let mut rng = rand::thread_rng();
@@ -14,7 +17,7 @@ pub async fn next_videos(
     user: &User,
     config: &Config,
     db_pool: &MySqlPool,
-) -> Result<Vec<Video>, Error> {
+) -> Result<Vec<Video>, Box<dyn Error>> {
     //TODO: Get videos from database (later with a hashtag algorithm which filters about x%)
     //TODO: Personalized score the videos
     //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
