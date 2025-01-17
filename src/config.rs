@@ -14,6 +14,8 @@ const FILE_PATH: &str = "config.json";
 pub const JWT_SECRET_KEY: &str = "JWT_SECRET";
 pub const INTERNAL_SECRET_KEY: &str = "INTERNAL_SECRET";
 pub const DATABASE_CONN_URL_KEY: &str = "DATABASE_CONNECTION_URL";
+pub const HOST_IP_KEY: &str = "HOST_IP";
+pub const HOST_PORT_KEY: &str = "HOST_PORT";
 
 //Tables
 pub const DB_VIDEO_TABLE: &str = "video";
@@ -60,7 +62,7 @@ pub fn overwrite(content: String) -> Result<(), Error> {
 }
 
 //Just most important things
-pub fn validate(c: &Config) -> Result<(), &str>{
+pub fn validate(c: &Config) -> Result<(), &str> {
     if c.next_videos_amount > c.next_videos_fetch_amount {
         return Err("Next Video amount must be higher than the Next Video Fetch Amount!");
     }
@@ -90,4 +92,3 @@ pub struct Config {
     pub next_videos_amount: u32,
     pub next_videos_fetch_amount: u32,
 }
-

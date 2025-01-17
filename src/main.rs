@@ -1,7 +1,8 @@
 use std::{
     env,
     process::exit,
-    sync::{Arc, Mutex}, time::Instant,
+    sync::{Arc, Mutex},
+    time::Instant,
 };
 
 use axum::{
@@ -10,7 +11,7 @@ use axum::{
     serve, Extension, Router,
 };
 use colored::Colorize;
-use config::{Config, DATABASE_CONN_URL_KEY};
+use config::{Config, DATABASE_CONN_URL_KEY, HOST_IP_KEY, HOST_PORT_KEY};
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
@@ -42,8 +43,8 @@ async fn main() {
     let config = config::load();
     config::validate(&config).expect("Config validation failed");
 
-    let ip = "0.0.0.0";
-    let port = "8020";
+    let ip = env::var(HOST_IP_KEY).expect("Did not find host ip in env");
+    let port = env::var(HOST_PORT_KEY).expect("Did not find host port in env");
     let addr = format!("{}:{}", ip, port);
 
     let listener = TcpListener::bind(&addr)
@@ -52,7 +53,10 @@ async fn main() {
 
     let db_pool = connect_db().await;
 
-    info!("Listening on {addr}, ({} ms)", Instant::elapsed(&start_time).as_millis());
+    info!(
+        "Listening on {addr}, ({} ms)",
+        Instant::elapsed(&start_time).as_millis()
+    );
 
     serve(listener, app(config, Some(db_pool)))
         .await
