@@ -1,3 +1,6 @@
+use std::time::Instant;
+
+use log::debug;
 use sqlx::{query, Error, MySqlPool, Row};
 use uuid::Uuid;
 
@@ -107,6 +110,7 @@ pub async fn get_random_videos(
     with_comment_count: bool,
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Error> {
+    let start_time = Instant::now();
     let mut videos = sqlx::query(&format!(
         "SELECT {UUID_COLUMN}, {USER_ID_COLUMN}, {VIDEO_UP_VOTES_COLUMN}, {VIDEO_DOWN_VOTES_COLUMN}, {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {VIDEO_STATUS_COLUMN} = ? ORDER BY RAND() LIMIT ?;"
     ))
@@ -135,5 +139,7 @@ pub async fn get_random_videos(
         }
     }
 
+
+    debug!("Fetching videos took: {} ms", Instant::elapsed(&start_time).as_millis());
     Ok(videos)
 }

@@ -4,7 +4,6 @@ use crate::{
     config::Config,
     database::{self, User, Video},
 };
-use log::debug;
 use rand::Rng;
 use sqlx::MySqlPool;
 
@@ -53,7 +52,6 @@ pub async fn next_videos(
         }
     }
 
-    debug!("{:?}", final_sort);
     Ok(final_sort)
 }
 
