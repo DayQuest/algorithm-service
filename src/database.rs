@@ -45,11 +45,11 @@ impl DatabaseModel<User> for User {
 pub struct Video {
     pub uuid: String,
     pub user_id: String,
-    pub upvotes: u32,
-    pub downvotes: u32,
-    pub views: u32,
-    pub comments: u32,
-    pub viewtime_seconds: u64,
+    pub upvotes: i32,
+    pub downvotes: i32,
+    pub views: i32,
+    pub comments: i32,
+    pub viewtime_seconds: i64,
 
     //Not saved in the database, a variable to set later
     pub score: f64,
@@ -79,15 +79,15 @@ impl DatabaseModel<Video> for Video {
     }
 }
 
-async fn comment_count(uuid: &str, db_pool: &MySqlPool) -> Result<u32, Error> {
-    let count: (i64,) = sqlx::query_as(&format!(
+async fn comment_count(uuid: &str, db_pool: &MySqlPool) -> Result<i32, Error> {
+    let count: (i32,) = sqlx::query_as(&format!(
         "SELECT COUNT(*) FROM {DB_COMMENT_TABLE} WHERE {VIDEO_ID_COLUMN} = UUID_TO_BIN(?);"
     ))
     .bind(uuid)
     .fetch_one(db_pool)
     .await?;
 
-    Ok(count.0 as u32)
+    Ok(count.0)
 }
 
 /// Fetches {amount} of videos randomly from the database using 1 query only.
@@ -96,7 +96,7 @@ async fn comment_count(uuid: &str, db_pool: &MySqlPool) -> Result<u32, Error> {
 /// costs a bit because it has to send an extra query for every video. If set on false only one query
 /// for everything is needed. So only enable when really needed!
 pub async fn get_random_videos(
-    amount: u32,
+    amount: i32,
     with_comment_count: bool,
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Error> {
