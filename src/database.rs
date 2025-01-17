@@ -1,4 +1,4 @@
-use sqlx::{query, query_scalar, Error, MySqlPool, Row};
+use sqlx::{query, Error, MySqlPool, Row};
 use uuid::Uuid;
 
 use crate::config::{
@@ -19,20 +19,26 @@ pub struct User {
 
 impl DatabaseModel<User> for User {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Self, Error> {
-        let liked_videos: Vec<String> = query_scalar(&format!(
+        let liked_videos: Vec<String> = query(&format!(
             "SELECT {VIDEO_ID_COLUMN} FROM {DB_LIKED_VIDEOS_TABLE} WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
         ))
         .bind(uuid)
         .fetch_all(db_pool)
-        .await?;
+        .await?
+        .iter()
+        .filter_map(|row| row.try_get::<String, _>(0).ok())
+        .collect();
 
         //user_uuid may be changed to user_id
-        let following: Vec<String> = query_scalar(&format!(
+        let following: Vec<String> = query(&format!(
             "SELECT {FOLLOWED_USERS_COLUMN} FROM {DB_USER_FOLLOWED_USER_TABLE} WHERE user_uuid = UUID_TO_BIN(?)"
         ))
         .bind(uuid)
         .fetch_all(db_pool)
-        .await?;
+        .await?
+        .iter()
+        .filter_map(|row| row.try_get::<String, _>(0).ok())
+        .collect();
 
         Ok(Self {
             liked_videos,
