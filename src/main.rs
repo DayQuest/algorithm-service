@@ -21,9 +21,11 @@ mod auth;
 mod config;
 mod database;
 mod endpoint;
+mod testing;
 
 #[tokio::main]
 async fn main() {
+    testing::set_vars();
     let start_time = Instant::now();
     ctrlc::set_handler(move || {
         info!("{}", "Stopping server, Bye :)".on_red());
