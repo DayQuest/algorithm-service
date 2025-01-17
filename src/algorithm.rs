@@ -7,7 +7,6 @@ use crate::{
 use rand::Rng;
 use sqlx::MySqlPool;
 
-
 fn random_bool(probability_true: f64) -> bool {
     let mut rng = rand::thread_rng();
     rng.gen::<f64>() < (probability_true)
@@ -53,7 +52,6 @@ pub async fn next_videos(
         }
     }
 
-
     Ok(final_sort)
 }
 
@@ -66,9 +64,9 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
     //Score up with views
     score += (video.views as f64 / 10.).powf(config.view_exponent);
 
-    //Score multiplied add by like-2-view ratio
+    //Score multiplied by like-2-view ratio
     if video.views != 0 {
-        score *= video.upvotes as f64 / video.views as f64;
+        score *= (video.upvotes as f64 / video.views as f64) * config.like_2_view_strength;
     }
 
     //Multiply score by upvote-2-totalvotes ratio
@@ -76,11 +74,12 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
     //Multiply score by avg. viewtime per view
     let total_votes = video.upvotes + video.downvotes;
     if video.views != 0 {
-        score *= video.viewtime_seconds as f64 / video.views as f64;
+        score *= (video.viewtime_seconds as f64 / video.views as f64)
+            * config.viewtime_per_view_strength;
 
         if total_votes != 0 {
             let upvote_ratio = video.upvotes as f64 / total_votes as f64;
-            score *= upvote_ratio.powf(config.upvote_2_totalvotes_ratio_exponent);
+            score *= upvote_ratio * config.upvote_2_totalvotes_strength;
 
             let downvote_impact = video.downvotes as f64 / video.views as f64;
             score *= (1.0 - downvote_impact).max(0.5);
@@ -88,8 +87,9 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
     }
 
     if video.comments != 0 {
+        //lower = better
         let comments_2_votes_ratio = total_votes as f64 / video.comments as f64;
-        score *= 1. / comments_2_votes_ratio;
+        score *= (1. / comments_2_votes_ratio) * config.comments_2_votes_strength;
     }
 
     normalize_score(&mut score, &config.viral_score, config.normalize_threshold);
@@ -110,12 +110,12 @@ fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
 pub fn score_video_personalized(user: &User, video: &Video, config: &Config) -> f64 {
     let mut score = score_video(video, config);
     if user.following.contains(&video.user_id) {
-        score *= config.viewer_following_creator_multiplier;
+        score *= config.viewer_following_creator_ratio_exponent;
     }
 
     //Do not wanna show exact same videos
     if user.liked_videos.contains(&video.uuid) {
-        score *= config.viewer_liked_video_multiplier;
+        score *= config.viewer_liked_video_ratio_exponent;
     }
 
     score

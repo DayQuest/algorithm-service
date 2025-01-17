@@ -35,7 +35,7 @@ async fn main() {
     .expect("Error setting Ctrl-C handler");
 
     Builder::new()
-        .filter_level(LevelFilter::Debug)
+        .filter_level(LevelFilter::Info)
         .format_target(false)
         .init();
     info!("Starting..");

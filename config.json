@@ -1,13 +1,16 @@
 {
+  "comments_2_votes_strength": 0.9,
   "config_name": "developing_V1",
   "high_score_video_probability": 0.1,
+  "like_2_view_strength": 1.2,
   "next_videos_amount": 15,
   "next_videos_fetch_amount": 25,
-  "normalize_threshold": 0.986,
-  "upvote_2_totalvotes_ratio_exponent": 1.2,
-  "upvote_exponent": 1.09,
-  "view_exponent": 1.04,
-  "viewer_following_creator_multiplier": 1.03,
-  "viewer_liked_video_multiplier": 0.96,
-  "viral_score": 1000.0
+  "normalize_threshold": 0.65,
+  "upvote_2_totalvotes_strength": 1.8,
+  "upvote_exponent": 2.1,
+  "view_exponent": 1.8,
+  "viewer_following_creator_ratio_exponent": 1.03,
+  "viewer_liked_video_ratio_exponent": 0.96,
+  "viewtime_per_view_strength": 1.2,
+  "viral_score": 10000.0
 }

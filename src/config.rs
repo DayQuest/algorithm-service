@@ -75,6 +75,22 @@ pub fn validate(c: &Config) -> Result<(), &str> {
         return Err("High Score Prob. must be higher than 0.00");
     }
 
+    if c.like_2_view_strength <= 0. {
+        return Err("Like 2 view strength must be higher than 0.00");
+    }
+
+    if c.comments_2_votes_strength <= 0. {
+        return Err("Comments 2 votes strength must be higher than 0.00");
+    }
+
+    if c.viewtime_per_view_strength <= 0. {
+        return Err("Viewtime per view strength must be higher than 0.00");
+    }
+
+    if c.upvote_2_totalvotes_strength <= 0. {
+        return Err("Upvotes 2 totalvotes strength must be higher than 0.00");
+    }
+
     Ok(())
 }
 
@@ -85,10 +101,16 @@ pub struct Config {
     pub high_score_video_probability: f64,
     pub upvote_exponent: f64,
     pub view_exponent: f64,
-    pub upvote_2_totalvotes_ratio_exponent: f64,
+
+    pub like_2_view_strength: f64,
+    pub viewtime_per_view_strength: f64,
+    pub comments_2_votes_strength: f64,
+
+    pub upvote_2_totalvotes_strength: f64,
     pub normalize_threshold: f64,
-    pub viewer_following_creator_multiplier: f64,
-    pub viewer_liked_video_multiplier: f64,
+    pub viewer_following_creator_ratio_exponent: f64,
+
+    pub viewer_liked_video_ratio_exponent: f64,
     pub next_videos_amount: u32,
     pub next_videos_fetch_amount: u32,
 }
