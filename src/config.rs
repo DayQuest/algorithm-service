@@ -19,19 +19,16 @@ pub const HOST_PORT_KEY: &str = "HOST_PORT";
 
 //Tables
 pub const DB_VIDEO_TABLE: &str = "video";
-pub const DB_COMMENT_TABLE: &str = "comment";
 pub const DB_LIKED_VIDEOS_TABLE: &str = "liked_videos";
 pub const DB_USER_FOLLOWED_USER_TABLE: &str = "user_followed_users";
+pub const VIDEO_READY_STATUS: &str = "3";
 
 //Columns
 pub const USER_ID_COLUMN: &str = "user_id";
+pub const VIDEO_STATUS_COLUMN: &str = "status";
 pub const FOLLOWED_USERS_COLUMN: &str = "followed_users";
 pub const UUID_COLUMN: &str = "uuid";
-
-//Video Status
-pub const VIDEO_STATUS_COLUMN: &str = "status";
-pub const VIDEO_READY_STATUS: &str = "3";
-
+pub const VIDEO_COMMENTS_COLUMN: &str = "comments";
 pub const VIDEO_ID_COLUMN: &str = "video_id";
 pub const VIDEO_UP_VOTES_COLUMN: &str = "up_votes";
 pub const VIDEO_DOWN_VOTES_COLUMN: &str = "down_votes";
