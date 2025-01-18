@@ -32,6 +32,7 @@ pub const UUID_COLUMN: &str = "uuid";
 pub const VIDEO_COMMENTS_COLUMN: &str = "comments";
 pub const VIDEO_ID_COLUMN: &str = "video_id";
 pub const VIDEO_UP_VOTES_COLUMN: &str = "up_votes";
+pub const VIDEO_HASHTAGS_COLUMN: &str = "hashtags";
 pub const VIDEO_DOWN_VOTES_COLUMN: &str = "down_votes";
 pub const VIDEO_VIEWS_COLUMN: &str = "views";
 pub const VIDEO_VIEWTIME_COLUMN: &str = "viewtime_seconds";
@@ -61,7 +62,7 @@ pub fn overwrite(content: String) -> Result<(), Error> {
 
 //Just most important things
 pub fn validate(c: &Config) -> Result<(), &str> {
-    if c.next_videos_amount > c.next_videos_fetch_amount {
+    if c.next_videos_amount > c.next_videos_fetch_amount_matching_hashtag + c.next_videos_fetch_amount_random {
         return Err("Next Video amount must be higher than the Next Video Fetch Amount!");
     }
 
@@ -100,6 +101,7 @@ pub struct Config {
     pub upvote_exponent: f64,
     pub view_exponent: f64,
 
+
     pub like_2_view_strength: f64,
     pub viewtime_per_view_strength: f64,
     pub comments_2_votes_strength: f64,
@@ -110,5 +112,6 @@ pub struct Config {
 
     pub viewer_liked_video_ratio_exponent: f64,
     pub next_videos_amount: u32,
-    pub next_videos_fetch_amount: u32,
+    pub next_videos_fetch_amount_matching_hashtag: u32,
+    pub next_videos_fetch_amount_random: u32,
 }

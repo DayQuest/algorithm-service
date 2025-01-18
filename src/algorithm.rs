@@ -22,7 +22,7 @@ pub async fn next_videos(
     //TODO: Personalized score the videos
     //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
     let fetched_videos =
-        database::get_random_videos(config.next_videos_fetch_amount as i32, db_pool).await?;
+        database::get_random_videos(config.next_videos_fetch_amount_matching_hashtag + config.next_videos_fetch_amount_random, db_pool).await?;
 
     //Score Videos
     let mut scored_personalized_videos = fetched_videos
