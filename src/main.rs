@@ -26,10 +26,6 @@ mod endpoint;
 
 #[tokio::main]
 async fn main() {
-    if let Ok(_) = dotenv() {
-        debug!("Loaded .env file for development")
-    }
-    
     let start_time = Instant::now();
     ctrlc::set_handler(move || {
         info!("{}", "Stopping server, Bye :)".on_red());
@@ -42,6 +38,9 @@ async fn main() {
         .format_target(false)
         .init();
     info!("Starting..");
+    if let Ok(_) = dotenv() {
+        info!("Loaded .env file {}", "(development only)".yellow())
+    }
     debug!("JWT: {}", auth::gen_token("testing".to_string()).unwrap());
     let config = config::load();
     config::validate(&config).expect("Config validation failed");
