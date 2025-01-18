@@ -22,7 +22,7 @@ pub async fn next_videos(
     //TODO: Personalized score the videos
     //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
     let fetched_videos =
-        database::get_random_videos(config.next_videos_fetch_amount_matching_hashtag + config.next_videos_fetch_amount_random, db_pool).await?;
+        database::get_random_videos(config.selecting.next_videos_fetch_amount_matching_hashtag + config.selecting.next_videos_fetch_amount_random, db_pool).await?;
 
     //Score Videos
     let mut scored_personalized_videos = fetched_videos
@@ -40,10 +40,10 @@ pub async fn next_videos(
 
     let mut high_score_video_chosen = 0;
     for (i, _) in scored_personalized_videos.iter().enumerate() {
-        if i >= config.next_videos_amount.try_into().unwrap() {
+        if i >= config.selecting.next_videos_amount.try_into().unwrap() {
             break;
         }
-        if random_bool(config.high_score_video_probability) {
+        if random_bool(config.selecting.high_score_video_probability) {
             //Put a high scored video in
             let video = scored_personalized_videos
                 .get(scored_personalized_videos.len() - high_score_video_chosen - 1)
@@ -63,14 +63,14 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
     let mut score = 1.;
 
     //Score up with likes
-    score += (video.upvotes as f64 / 10.).powf(config.upvote_exponent);
+    score += (video.upvotes as f64 / 10.).powf(config.scoring.upvote_exponent);
 
     //Score up with views
-    score += (video.views as f64 / 10.).powf(config.view_exponent);
+    score += (video.views as f64 / 10.).powf(config.scoring.view_exponent);
 
     //Score multiplied by like-2-view ratio
     if video.views != 0 {
-        score *= (video.upvotes as f64 / video.views as f64) * config.like_2_view_strength;
+        score *= (video.upvotes as f64 / video.views as f64) * config.scoring.like_2_view_strength;
     }
 
     //Multiply score by upvote-2-totalvotes ratio
@@ -79,11 +79,11 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
     let total_votes = video.upvotes + video.downvotes;
     if video.views != 0 {
         score *= (video.viewtime_seconds as f64 / video.views as f64)
-            * config.viewtime_per_view_strength;
+            * config.scoring.viewtime_per_view_strength;
 
         if total_votes != 0 {
             let upvote_ratio = video.upvotes as f64 / total_votes as f64;
-            score *= upvote_ratio * config.upvote_2_totalvotes_strength;
+            score *= upvote_ratio * config.scoring.upvote_2_totalvotes_strength;
 
             let downvote_impact = video.downvotes as f64 / video.views as f64;
             score *= (1.0 - downvote_impact).max(0.5);
@@ -93,10 +93,10 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
     if video.comments != 0 {
         //lower = better
         let comments_2_votes_ratio = total_votes as f64 / video.comments as f64;
-        score *= (1. / comments_2_votes_ratio) * config.comments_2_votes_strength;
+        score *= (1. / comments_2_votes_ratio) * config.scoring.comments_2_votes_strength;
     }
 
-    normalize_score(&mut score, &config.viral_score, config.normalize_threshold);
+    normalize_score(&mut score, &config.scoring.viral_score, config.scoring.normalize_threshold);
 
     score
 }
@@ -115,12 +115,12 @@ fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
 pub fn score_video_personalized(user: &User, video: &Video, config: &Config) -> f64 {
     let mut score = score_video(video, config);
     if user.following.contains(&video.user_id) {
-        score *= config.viewer_following_creator_ratio_exponent;
+        score *= config.scoring.viewer_following_creator_ratio_exponent;
     }
 
     //Do not wanna show exact same videos
     if user.liked_videos.contains(&video.uuid) {
-        score *= config.viewer_liked_video_ratio_exponent;
+        score *= config.scoring.viewer_liked_video_ratio_exponent;
     }
 
     score
