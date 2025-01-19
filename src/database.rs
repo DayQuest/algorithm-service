@@ -24,26 +24,36 @@ pub struct User {
 
 impl DatabaseModel<User> for User {
     async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Self, Error> {
-        let liked_videos: Vec<String> = query(&format!(
-            "SELECT {VIDEO_ID_COLUMN} FROM {DB_LIKED_VIDEOS_TABLE} WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
+        let rows = query(&format!(
+            "
+            SELECT {VIDEO_ID_COLUMN} AS id, 'liked_video' AS source
+            FROM {DB_LIKED_VIDEOS_TABLE}
+            WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
+            
+            UNION
+            
+            SELECT {FOLLOWED_USERS_COLUMN} AS id, 'followed_user' AS source
+            FROM {DB_USER_FOLLOWED_USER_TABLE}
+            WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
+            "
         ))
         .bind(uuid)
+        .bind(uuid) // Bind the UUID for both parts of the UNION query
         .fetch_all(db_pool)
-        .await?
-        .iter()
-        .filter_map(|row| row.try_get::<String, _>(0).ok())
-        .collect();
+        .await?;
 
-        //user_uuid may be changed to user_id
-        let following: Vec<String> = query(&format!(
-            "SELECT {FOLLOWED_USERS_COLUMN} FROM {DB_USER_FOLLOWED_USER_TABLE} WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
-        ))
-        .bind(uuid)
-        .fetch_all(db_pool)
-        .await?
-        .iter()
-        .filter_map(|row| row.try_get::<String, _>(0).ok())
-        .collect();
+        let mut liked_videos = Vec::new();
+        let mut following = Vec::new();
+
+        for row in rows {
+            let id: String = row.try_get("id")?;
+            let source: String = row.try_get("source")?;
+            match source.as_str() {
+                "liked_video" => liked_videos.push(id),
+                "followed_user" => following.push(id),
+                _ => (),
+            }
+        }
 
         Ok(Self {
             liked_videos,
