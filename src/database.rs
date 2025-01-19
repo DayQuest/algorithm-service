@@ -35,7 +35,7 @@ impl DatabaseModel<User> for User {
 
         //user_uuid may be changed to user_id
         let following: Vec<String> = query(&format!(
-            "SELECT {FOLLOWED_USERS_COLUMN} FROM {DB_USER_FOLLOWED_USER_TABLE} WHERE user_uuid = UUID_TO_BIN(?)"
+            "SELECT {FOLLOWED_USERS_COLUMN} FROM {DB_USER_FOLLOWED_USER_TABLE} WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
         ))
         .bind(uuid)
         .fetch_all(db_pool)
