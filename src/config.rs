@@ -119,6 +119,7 @@ pub struct SelectingConfig {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     pub config_name: String,
+    pub max_dbpool_connections: u32,
     pub scoring: ScoringConfig,
     pub selecting: SelectingConfig,
 }
