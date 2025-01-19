@@ -38,7 +38,7 @@ impl DatabaseModel<User> for User {
             "
         ))
         .bind(uuid)
-        .bind(uuid) // Bind the UUID for both parts of the UNION query
+        .bind(uuid)
         .fetch_all(db_pool)
         .await?;
 
