@@ -11,7 +11,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 
 const FILE_PATH: &str = "config.json";
-pub const JWT_SECRET_KEY: &str = "JWT_SECRETJWT_SECRET";
+pub const JWT_SECRET_KEY: &str = "JWT_SECRET";
 pub const INTERNAL_SECRET_KEY: &str = "INTERNAL_SECRET";
 pub const DATABASE_CONN_URL_KEY: &str = "DATABASE_CONNECTION_URL";
 pub const HOST_IP_KEY: &str = "HOST_IP";
