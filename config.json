@@ -11,7 +11,7 @@
     "viewer_following_creator_ratio_exponent": 1.03,
     "viewer_liked_video_ratio_exponent": 0.96,
     "viewtime_per_view_strength": 1.2,
-    "viral_score": 10000.0
+    "viral_score": 1000.0
   },
 
   "selecting": {
