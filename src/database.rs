@@ -6,10 +6,7 @@ use sqlx::{query, Error, MySqlPool, Row};
 use uuid::Uuid;
 
 use crate::config::{
-    DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE,
-    FOLLOWED_USERS_COLUMN, USER_ID_COLUMN, UUID_COLUMN, VIDEO_COMMENTS_COLUMN,
-    VIDEO_DOWN_VOTES_COLUMN, VIDEO_HASHTAGS_COLUMN, VIDEO_ID_COLUMN, VIDEO_READY_STATUS,
-    VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN,
+    Config, DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE, FOLLOWED_USERS_COLUMN, USER_ID_COLUMN, UUID_COLUMN, VIDEO_COMMENTS_COLUMN, VIDEO_DOWN_VOTES_COLUMN, VIDEO_HASHTAGS_COLUMN, VIDEO_ID_COLUMN, VIDEO_READY_STATUS, VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN
 };
 
 pub trait DatabaseModel<T> {
@@ -20,6 +17,7 @@ pub trait DatabaseModel<T> {
 pub struct User {
     pub liked_videos: Vec<String>,
     pub following: Vec<String>,
+    pub hashtags: Vec<String>,
 }
 
 impl DatabaseModel<User> for User {
@@ -60,6 +58,10 @@ impl DatabaseModel<User> for User {
             following,
         })
     }
+}
+
+fn rank_hashtags(liked_videos: Vec<String>) {
+
 }
 
 #[derive(Clone, Debug)]
@@ -110,7 +112,8 @@ impl DatabaseModel<Video> for Video {
     }
 }
 
-pub async fn get_random_videos(amount: u32, db_pool: &MySqlPool) -> Result<Vec<Video>, Error> {
+// For next videos endpoint
+pub async fn fetch_next_videos(hashtag: String, config: &Config, db_pool: &MySqlPool) -> Result<(Vec<Video>, Vec<Video>), Error> {
     let start_time = Instant::now();
 
     let videos = sqlx::query(&format!(
@@ -152,4 +155,5 @@ pub async fn get_random_videos(amount: u32, db_pool: &MySqlPool) -> Result<Vec<V
         Instant::elapsed(&start_time).as_millis()
     );
     Ok(videos)
+
 }

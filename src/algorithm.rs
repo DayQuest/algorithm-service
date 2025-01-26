@@ -4,7 +4,6 @@ use crate::{
     config::Config,
     database::{self, User, Video},
 };
-use log::debug;
 use rand::Rng;
 use sqlx::MySqlPool;
 
@@ -22,7 +21,7 @@ pub async fn next_videos(
     //TODO: Personalized score the videos
     //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
     let fetched_videos =
-        database::get_random_videos(config.selecting.next_videos_fetch_amount_matching_hashtag + config.selecting.next_videos_fetch_amount_random, db_pool).await?;
+        database::fetch_next_videos(todo!(), config, db_pool).await?;
 
     //Score Videos
     let mut scored_personalized_videos = fetched_videos
@@ -43,17 +42,25 @@ pub async fn next_videos(
         if i >= config.selecting.next_videos_amount.try_into().unwrap() {
             break;
         }
-        if random_bool(config.selecting.high_score_video_probability) {
-            //Put a high scored video in
-            let video = scored_personalized_videos
-                .get(scored_personalized_videos.len() - high_score_video_chosen - 1)
-                .unwrap();
-            debug!("i: {i}, len: {}", scored_personalized_videos.len());
-            final_sort.push(video.clone());
-            high_score_video_chosen += 1;
-        } else {
-            final_sort.push(scored_personalized_videos.get(i).unwrap().clone());
+
+
+        if random_bool(config.selecting.hashtag_video_probability) {
+            
         }
+
+        if random_bool(config.selecting.hashtag_video_probability) {
+            if random_bool(config.selecting.high_score_video_probability) {
+                //At this point an user gets a high scored + liked hashtag video
+                let video = scored_personalized_videos
+                    .get(scored_personalized_videos.len() - high_score_video_chosen - 1)
+                    .unwrap();
+                final_sort.push(video.clone());
+                high_score_video_chosen += 1;
+            } else {
+                final_sort.push(scored_personalized_videos.get(i).unwrap().clone());
+            }
+        }
+        
     }
 
     Ok(final_sort)
@@ -111,6 +118,7 @@ fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
         *score = target * (1.0 - (1.0 - ratio) * (1.0 - threshold));
     }
 }
+
 
 pub fn score_video_personalized(user: &User, video: &Video, config: &Config) -> f64 {
     let mut score = score_video(video, config);
