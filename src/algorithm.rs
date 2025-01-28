@@ -18,11 +18,15 @@ pub async fn next_videos(
     config: &Config,
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Box<dyn Error>> {
-    //TODO: Get videos from database (later with a hashtag algorithm which filters about x%)
+    //TODO: Get videos from database (later with a hashtag filters about x%)
     //TODO: Personalized score the videos
     //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
-    let fetched_videos =
-        database::get_random_videos(config.selecting.next_videos_fetch_amount_matching_hashtag + config.selecting.next_videos_fetch_amount_random, db_pool).await?;
+    let fetched_videos = database::get_random_videos(
+        config.selecting.next_videos_fetch_amount_matching_hashtag
+            + config.selecting.next_videos_fetch_amount_random,
+        db_pool,
+    )
+    .await?;
 
     //Score Videos
     let mut scored_personalized_videos = fetched_videos
@@ -96,7 +100,11 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
         score *= (1. / comments_2_votes_ratio) * config.scoring.comments_2_votes_strength;
     }
 
-    normalize_score(&mut score, &config.scoring.viral_score, config.scoring.normalize_threshold);
+    normalize_score(
+        &mut score,
+        &config.scoring.viral_score,
+        config.scoring.normalize_threshold,
+    );
 
     score
 }
