@@ -11,10 +11,11 @@
     "viewer_following_creator_ratio_exponent": 1.03,
     "viewer_liked_video_ratio_exponent": 0.96,
     "viewtime_per_view_strength": 1.2,
-    "viral_score": 10000.0
+    "viral_score": 1000.0
   },
 
   "selecting": {
+    "c": 0.2,
     "high_score_video_probability": 0.1,
     "next_videos_amount": 15,
     "next_videos_fetch_amount_matching_hashtag": 10,
