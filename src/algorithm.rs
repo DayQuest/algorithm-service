@@ -101,7 +101,7 @@ pub async fn next_videos(
             break;
         }
 
-        if hashtag.is_some() && random_bool(config.selecting.hashtag_to_random_video_probability) {
+        if hashtag.is_some() && random_bool(config.selecting.hashtag_2_random_video_probability) {
             // Hashtag Video
             let chosen = weighted_random(
                 &sorted_hashtag_vids,
