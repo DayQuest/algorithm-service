@@ -159,27 +159,36 @@ pub async fn fetch_next_videos(
     .bind(config.selecting.next_videos_fetch_amount_matching_hashtag)
     .fetch_all(db_pool)
     .await?;
-    
-    let (random_videos, hashtag_videos): (Vec<Video>, Vec<Video>) = videos
-        .iter()
-        .fold((Vec::new(), Vec::new()), |(mut random_videos, mut hashtag_videos), row| {
+
+    let (random_videos, hashtag_videos): (Vec<Video>, Vec<Video>) = videos.iter().fold(
+        (Vec::new(), Vec::new()),
+        |(mut random_videos, mut hashtag_videos), row| {
             let video_result = (|| -> Result<Video, Error> {
                 Ok(Video {
-                    uuid: Uuid::from_slice(row.try_get("UUID_COLUMN")?).unwrap().to_string(),
-                    user_id: Uuid::from_slice(row.try_get("USER_ID_COLUMN")?).unwrap().to_string(),
+                    uuid: Uuid::from_slice(row.try_get("UUID_COLUMN")?)
+                        .unwrap()
+                        .to_string(),
+                    user_id: Uuid::from_slice(row.try_get("USER_ID_COLUMN")?)
+                        .unwrap()
+                        .to_string(),
                     upvotes: row.try_get("VIDEO_UP_VOTES_COLUMN")?,
                     downvotes: row.try_get("VIDEO_DOWN_VOTES_COLUMN")?,
                     views: row.try_get("VIDEO_VIEWS_COLUMN")?,
                     comments: row.try_get("VIDEO_COMMENTS_COLUMN")?,
                     viewtime_seconds: row.try_get("VIDEO_VIEWTIME_COLUMN")?,
-                    hashtags: from_str(row.try_get("VIDEO_HASHTAGS_COLUMN")?).unwrap_or_else(|_| vec![]),
+                    hashtags: from_str(row.try_get("VIDEO_HASHTAGS_COLUMN")?)
+                        .unwrap_or_else(|_| vec![]),
                     score: 0.,
                 })
             })();
-    
+
             match video_result {
                 Ok(video) => {
-                    match row.try_get::<String, _>("source").unwrap_or_default().as_str() {
+                    match row
+                        .try_get::<String, _>("source")
+                        .unwrap_or_default()
+                        .as_str()
+                    {
                         "random" => random_videos.push(video),
                         "hashtag_match" => hashtag_videos.push(video),
                         _ => (),
@@ -189,14 +198,15 @@ pub async fn fetch_next_videos(
                     eprintln!("Error processing video row: {:?}", err);
                 }
             }
-    
+
             (random_videos, hashtag_videos)
-        });
+        },
+    );
 
     debug!(
         "Fetching videos took: {} ms",
         Instant::elapsed(&start_time).as_millis()
     );
-    
+
     Ok((random_videos, hashtag_videos))
 }

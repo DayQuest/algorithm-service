@@ -22,7 +22,7 @@ pub struct ScoreVideoRequest {
     uuid: String,
 }
 
-//#[debug_handler] 
+//#[debug_handler]
 pub async fn score_video(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,
@@ -60,7 +60,8 @@ pub async fn score_video_personalized(
     match Video::from_db(&payload.video_id, &db_pool).await {
         Ok(video) => match User::from_db(&payload.user_id, &db_pool).await {
             Ok(user) => {
-                let score = algorithm::score_video_personalized(&user, &video, &config.lock().unwrap());
+                let score =
+                    algorithm::score_video_personalized(&user, &video, &config.lock().unwrap());
                 Ok(Json(PersonalizeScoreResponse { score }))
             }
 
@@ -98,7 +99,7 @@ pub async fn next_videos(
         .await
         .or_else(|why| {
             warn!("Fetching user failed: {why}");
-           return Err(StatusCode::NOT_FOUND);
+            return Err(StatusCode::NOT_FOUND);
         })?;
 
     let videos = algorithm::next_videos(&user, &config, &db_pool)

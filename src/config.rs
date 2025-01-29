@@ -62,7 +62,10 @@ pub fn overwrite(content: String) -> Result<(), Error> {
 
 //Just most important things
 pub fn validate(c: &Config) -> Result<(), &str> {
-    if c.selecting.next_videos_amount > c.selecting.next_videos_fetch_amount_matching_hashtag + c.selecting.next_videos_fetch_amount_random {
+    if c.selecting.next_videos_amount
+        > c.selecting.next_videos_fetch_amount_matching_hashtag
+            + c.selecting.next_videos_fetch_amount_random
+    {
         return Err("Next Video amount must be higher than the Next Video Fetch Amount!");
     }
 
@@ -94,7 +97,7 @@ pub fn validate(c: &Config) -> Result<(), &str> {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
-pub struct ScoringConfig{
+pub struct ScoringConfig {
     pub upvote_exponent: f64,
     pub view_exponent: f64,
     pub like_2_view_strength: f64,
@@ -106,7 +109,6 @@ pub struct ScoringConfig{
     pub viewer_liked_video_ratio_exponent: f64,
     pub viral_score: f64,
 }
-
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct SelectingConfig {

@@ -50,7 +50,6 @@ fn score_sort_random_videos(videos: Vec<Video>, user: &User, config: &Config) ->
     scored_random_vids
 }
 
-
 fn count_total_hashtag_overlap(video_hashtags: &Vec<String>, all_videos: &[Video]) -> usize {
     all_videos
         .iter()
@@ -73,7 +72,10 @@ fn sort_hashtags(videos: Vec<Video>) -> Vec<Video> {
         })
         .collect();
     videos_with_overlap.sort_by(|a, b| b.1.cmp(&a.1));
-    videos_with_overlap.into_iter().map(|(video, _)| video).collect()
+    videos_with_overlap
+        .into_iter()
+        .map(|(video, _)| video)
+        .collect()
 }
 
 pub async fn next_videos(
@@ -87,8 +89,12 @@ pub async fn next_videos(
         config.selecting.user_hashtag_decay_factor,
     );
 
-    let fetched_videos =
-        database::fetch_next_videos(config, hashtag.clone().unwrap_or_else(|| "/".into()), db_pool).await?;
+    let fetched_videos = database::fetch_next_videos(
+        config,
+        hashtag.clone().unwrap_or_else(|| "/".into()),
+        db_pool,
+    )
+    .await?;
 
     let sorted_hashtag_vids = sort_hashtags(fetched_videos.1);
     let sorted_rand_scored_vids = score_sort_random_videos(fetched_videos.0, user, config);
@@ -106,8 +112,9 @@ pub async fn next_videos(
             let chosen = weighted_random(
                 &sorted_hashtag_vids,
                 config.selecting.select_high_freq_hashtag_probability,
-            ).unwrap();
-            
+            )
+            .unwrap();
+
             final_sort.push(chosen);
         } else {
             // Non-Hashtag or random video
@@ -124,13 +131,15 @@ pub async fn next_videos(
         }
     }
 
-    debug!("Next Video Selecting took: {} ms", start_time.elapsed().as_millis());
+    debug!(
+        "Next Video Selecting took: {} ms",
+        start_time.elapsed().as_millis()
+    );
     Ok(final_sort)
 }
 
 pub fn score_video(video: &Video, config: &Config) -> f64 {
     let mut score = 1.;
-    
 
     //Score up with likes
     score += (video.upvotes as f64 / 10.).powf(config.scoring.upvote_exponent);
