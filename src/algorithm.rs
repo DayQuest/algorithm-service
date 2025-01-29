@@ -4,7 +4,6 @@ use crate::{
     config::Config,
     database::{self, User, Video},
 };
-use log::{debug, warn};
 use rand::{distributions::WeightedIndex, prelude::Distribution, thread_rng, Rng};
 use sqlx::MySqlPool;
 
@@ -13,7 +12,7 @@ fn random_bool(probability_true: f64) -> bool {
     rng.gen::<f64>() < (probability_true)
 }
 
-fn weighted_random<T>(vec: Vec<T>, decay_factor: f64) -> Option<T>
+fn weighted_random<T>(vec: &Vec<T>, decay_factor: f64) -> Option<T>
 where
     T: Clone,
 {
@@ -36,18 +35,18 @@ where
     Some(vec[index].clone())
 }
 
-
 pub async fn next_videos(
     user: &User,
     config: &Config,
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Box<dyn Error>> {
-    let hashtag = weighted_random(user.ranked_hashtags, config.selecting.user_hashtag_decay_factor);
-    if hashtag.is_none() {
-        warn!("Selecting searching hashtag of user: `{}` failed!", user.uuid);
-    }
-    
-    let fetched_videos = database::fetch_next_videos(config, hashtag.unwrap(), db_pool).await?;
+    let hashtag = weighted_random(
+        &user.ranked_hashtags,
+        config.selecting.user_hashtag_decay_factor,
+    );
+
+    let fetched_videos =
+        database::fetch_next_videos(config, hashtag.clone().unwrap_or_else(|| "/".into()), db_pool).await?;
     let random_vids = fetched_videos.0;
     let hashtag_vids = fetched_videos.1;
 
@@ -64,29 +63,31 @@ pub async fn next_videos(
 
     let mut final_sort: Vec<Video> = Vec::new();
 
-    if random_bool(config.selecting.hashtag_to_random_video_probability) {
-        
-        //Hashtag Video
-        
-    } else {
-        //Scored Video
-    }
-
     let mut high_score_video_chosen = 0;
-    for (i, _) in scored_personalized_videos.iter().enumerate() {
+    for i in 0..scored_random_vids.len() + hashtag_vids.len() {
         if i >= config.selecting.next_videos_amount.try_into().unwrap() {
             break;
         }
-        if random_bool(config.selecting.high_score_video_probability) {
-            //Put a high scored video in
-            let video = scored_personalized_videos
-                .get(scored_personalized_videos.len() - high_score_video_chosen - 1)
-                .unwrap();
-            debug!("i: {i}, len: {}", scored_personalized_videos.len());
-            final_sort.push(video.clone());
-            high_score_video_chosen += 1;
+
+        if hashtag.is_some() && random_bool(config.selecting.hashtag_to_random_video_probability) {
+            let chosen = weighted_random(
+                &hashtag_vids,
+                config.selecting.select_high_freq_hashtag_probability,
+            ).unwrap();
+            
+            final_sort.push(chosen);
         } else {
-            final_sort.push(scored_personalized_videos.get(i).unwrap().clone());
+            // Non-Hashtag or random video
+            if random_bool(config.selecting.high_score_video_probability) {
+                //Put a high scored video in
+                let video = scored_random_vids
+                    .get(scored_random_vids.len() - high_score_video_chosen - 1)
+                    .unwrap();
+                final_sort.push(video.clone());
+                high_score_video_chosen += 1;
+            } else {
+                final_sort.push(scored_random_vids.get(i).unwrap().clone());
+            }
         }
     }
 
@@ -95,6 +96,7 @@ pub async fn next_videos(
 
 pub fn score_video(video: &Video, config: &Config) -> f64 {
     let mut score = 1.;
+    
 
     //Score up with likes
     score += (video.upvotes as f64 / 10.).powf(config.scoring.upvote_exponent);

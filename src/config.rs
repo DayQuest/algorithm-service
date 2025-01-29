@@ -110,6 +110,7 @@ pub struct ScoringConfig{
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct SelectingConfig {
+    pub select_high_freq_hashtag_probability: f64,
     pub user_hashtag_decay_factor: f64,
     pub hashtag_to_random_video_probability: f64,
     pub high_score_video_probability: f64,
