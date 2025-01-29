@@ -1,9 +1,10 @@
-use std::error::Error;
+use std::{error::Error, time::Instant};
 
 use crate::{
     config::Config,
     database::{self, User, Video},
 };
+use log::debug;
 use rand::{distributions::WeightedIndex, prelude::Distribution, thread_rng, Rng};
 use sqlx::MySqlPool;
 
@@ -35,22 +36,8 @@ where
     Some(vec[index].clone())
 }
 
-pub async fn next_videos(
-    user: &User,
-    config: &Config,
-    db_pool: &MySqlPool,
-) -> Result<Vec<Video>, Box<dyn Error>> {
-    let hashtag = weighted_random(
-        &user.ranked_hashtags,
-        config.selecting.user_hashtag_decay_factor,
-    );
-
-    let fetched_videos =
-        database::fetch_next_videos(config, hashtag.clone().unwrap_or_else(|| "/".into()), db_pool).await?;
-    let random_vids = fetched_videos.0;
-    let hashtag_vids = fetched_videos.1;
-
-    let mut scored_random_vids = random_vids
+fn score_sort_random_videos(videos: Vec<Video>, user: &User, config: &Config) -> Vec<Video> {
+    let mut scored_random_vids = videos
         .into_iter()
         .map(|mut video| {
             video.score = score_video_personalized(user, &video, config);
@@ -60,18 +47,64 @@ pub async fn next_videos(
 
     //Sort => lowest first.
     scored_random_vids.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+    scored_random_vids
+}
+
+
+fn count_total_hashtag_overlap(video_hashtags: &Vec<String>, all_videos: &[Video]) -> usize {
+    all_videos
+        .iter()
+        .filter(|other_video| &other_video.hashtags != video_hashtags)
+        .map(|other_video| {
+            video_hashtags
+                .iter()
+                .filter(|hashtag| other_video.hashtags.contains(*hashtag))
+                .count()
+        })
+        .sum()
+}
+
+fn sort_hashtags(videos: Vec<Video>) -> Vec<Video> {
+    let mut videos_with_overlap: Vec<(Video, usize)> = videos
+        .iter()
+        .map(|video| {
+            let overlap_count = count_total_hashtag_overlap(&video.hashtags, &videos);
+            (video.clone(), overlap_count)
+        })
+        .collect();
+    videos_with_overlap.sort_by(|a, b| b.1.cmp(&a.1));
+    videos_with_overlap.into_iter().map(|(video, _)| video).collect()
+}
+
+pub async fn next_videos(
+    user: &User,
+    config: &Config,
+    db_pool: &MySqlPool,
+) -> Result<Vec<Video>, Box<dyn Error>> {
+    let start_time = Instant::now();
+    let hashtag = weighted_random(
+        &user.ranked_hashtags,
+        config.selecting.user_hashtag_decay_factor,
+    );
+
+    let fetched_videos =
+        database::fetch_next_videos(config, hashtag.clone().unwrap_or_else(|| "/".into()), db_pool).await?;
+
+    let sorted_hashtag_vids = sort_hashtags(fetched_videos.1);
+    let sorted_rand_scored_vids = score_sort_random_videos(fetched_videos.0, user, config);
 
     let mut final_sort: Vec<Video> = Vec::new();
 
     let mut high_score_video_chosen = 0;
-    for i in 0..scored_random_vids.len() + hashtag_vids.len() {
+    for i in 0..sorted_rand_scored_vids.len() + sorted_hashtag_vids.len() {
         if i >= config.selecting.next_videos_amount.try_into().unwrap() {
             break;
         }
 
         if hashtag.is_some() && random_bool(config.selecting.hashtag_to_random_video_probability) {
+            // Hashtag Video
             let chosen = weighted_random(
-                &hashtag_vids,
+                &sorted_hashtag_vids,
                 config.selecting.select_high_freq_hashtag_probability,
             ).unwrap();
             
@@ -80,17 +113,18 @@ pub async fn next_videos(
             // Non-Hashtag or random video
             if random_bool(config.selecting.high_score_video_probability) {
                 //Put a high scored video in
-                let video = scored_random_vids
-                    .get(scored_random_vids.len() - high_score_video_chosen - 1)
+                let video = sorted_rand_scored_vids
+                    .get(sorted_rand_scored_vids.len() - high_score_video_chosen - 1)
                     .unwrap();
                 final_sort.push(video.clone());
                 high_score_video_chosen += 1;
             } else {
-                final_sort.push(scored_random_vids.get(i).unwrap().clone());
+                final_sort.push(sorted_rand_scored_vids.get(i).unwrap().clone());
             }
         }
     }
 
+    debug!("Next Video Selecting took: {} ms", start_time.elapsed().as_millis());
     Ok(final_sort)
 }
 

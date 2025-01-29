@@ -18,7 +18,6 @@ pub trait DatabaseModel<T> {
 
 #[derive(Clone)]
 pub struct User {
-    pub uuid: String,
     pub liked_videos: Vec<String>,
     pub following: Vec<String>,
     pub ranked_hashtags: Vec<String>,
@@ -61,7 +60,6 @@ impl DatabaseModel<User> for User {
             ranked_hashtags: vec![], //TODO
             liked_videos,
             following,
-            uuid: uuid.into(),
         })
     }
 }
