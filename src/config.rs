@@ -112,7 +112,7 @@ pub struct ScoringConfig{
 pub struct SelectingConfig {
     pub select_high_freq_hashtag_probability: f64,
     pub user_hashtag_decay_factor: f64,
-    pub hashtag_to_random_video_probability: f64,
+    pub hashtag_2_random_video_probability: f64,
     pub high_score_video_probability: f64,
     pub next_videos_amount: u32,
     pub next_videos_fetch_amount_matching_hashtag: u32,
