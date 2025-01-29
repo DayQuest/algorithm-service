@@ -18,8 +18,10 @@ pub trait DatabaseModel<T> {
 
 #[derive(Clone)]
 pub struct User {
+    pub uuid: String,
     pub liked_videos: Vec<String>,
     pub following: Vec<String>,
+    pub ranked_hashtags: Vec<String>,
 }
 
 impl DatabaseModel<User> for User {
@@ -56,8 +58,10 @@ impl DatabaseModel<User> for User {
         }
 
         Ok(Self {
+            ranked_hashtags: vec![], //TODO
             liked_videos,
             following,
+            uuid: uuid.into(),
         })
     }
 }
@@ -116,40 +120,40 @@ pub async fn fetch_next_videos(
     db_pool: &MySqlPool,
 ) -> Result<(Vec<Video>, Vec<Video>), Error> {
     let start_time = Instant::now();
-    
-    let videos = sqlx::query(
+
+    let videos = sqlx::query(&format!(
         "(
             SELECT UUID_COLUMN,
-                   USER_ID_COLUMN,
-                   VIDEO_HASHTAGS_COLUMN,
-                   VIDEO_COMMENTS_COLUMN,
-                   VIDEO_UP_VOTES_COLUMN,
-                   VIDEO_DOWN_VOTES_COLUMN,
-                   VIDEO_VIEWS_COLUMN,
-                   VIDEO_VIEWTIME_COLUMN,
+                   {USER_ID_COLUMN},
+                   {VIDEO_HASHTAGS_COLUMN},
+                   {VIDEO_COMMENTS_COLUMN},
+                   {VIDEO_UP_VOTES_COLUMN},
+                   {VIDEO_DOWN_VOTES_COLUMN},
+                   {VIDEO_VIEWS_COLUMN},
+                   {VIDEO_VIEWTIME_COLUMN},
                    'random' AS source
-            FROM DB_VIDEO_TABLE
-            WHERE VIDEO_STATUS_COLUMN = ?
+            FROM {DB_VIDEO_TABLE}
+            WHERE {VIDEO_STATUS_COLUMN} = ?
             ORDER BY RAND()
             LIMIT ?
         )
         UNION ALL
         (
-            SELECT UUID_COLUMN,
-                   USER_ID_COLUMN,
-                   VIDEO_HASHTAGS_COLUMN,
-                   VIDEO_COMMENTS_COLUMN,
-                   VIDEO_UP_VOTES_COLUMN,
-                   VIDEO_DOWN_VOTES_COLUMN,
-                   VIDEO_VIEWS_COLUMN,
-                   VIDEO_VIEWTIME_COLUMN,
+            SELECT {UUID_COLUMN},
+                   {USER_ID_COLUMN},
+                   {VIDEO_HASHTAGS_COLUMN},
+                   {VIDEO_COMMENTS_COLUMN},
+                   {VIDEO_UP_VOTES_COLUMN},
+                   {VIDEO_DOWN_VOTES_COLUMN},
+                   {VIDEO_VIEWS_COLUMN},
+                   {VIDEO_VIEWTIME_COLUMN},
                    'hashtag_match' AS source
-            FROM DB_VIDEO_TABLE
-            WHERE VIDEO_STATUS_COLUMN = ? 
-              AND JSON_CONTAINS(VIDEO_HASHTAGS_COLUMN, ?)
+            FROM {DB_VIDEO_TABLE}
+            WHERE {VIDEO_STATUS_COLUMN} = ? 
+              AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)
             LIMIT ?
         );"
-    )
+    ))
     .bind(VIDEO_READY_STATUS)
     .bind(config.selecting.next_videos_fetch_amount_random)
     .bind(VIDEO_READY_STATUS)

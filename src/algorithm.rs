@@ -4,8 +4,8 @@ use crate::{
     config::Config,
     database::{self, User, Video},
 };
-use log::debug;
-use rand::Rng;
+use log::{debug, warn};
+use rand::{distributions::WeightedIndex, prelude::Distribution, thread_rng, Rng};
 use sqlx::MySqlPool;
 
 fn random_bool(probability_true: f64) -> bool {
@@ -13,23 +13,45 @@ fn random_bool(probability_true: f64) -> bool {
     rng.gen::<f64>() < (probability_true)
 }
 
+fn weighted_random<T>(vec: Vec<T>, decay_factor: f64) -> Option<T>
+where
+    T: Clone,
+{
+    let len = vec.len();
+    if len == 0 {
+        return None;
+    }
+
+    let weights: Vec<f64> = (0..len)
+        .map(|i| {
+            let weight = decay_factor.powi(i as i32);
+            weight
+        })
+        .collect();
+
+    let dist = WeightedIndex::new(&weights).unwrap();
+    let mut rng = thread_rng();
+    let index = dist.sample(&mut rng);
+
+    Some(vec[index].clone())
+}
+
+
 pub async fn next_videos(
     user: &User,
     config: &Config,
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Box<dyn Error>> {
-    //TODO: Get videos from database (later with a hashtag filters about x%)
-    //TODO: Personalized score the videos
-    //TODO: Order with a pattern: Video with low score, sometimes high score, after high score x% low score
-    let fetched_videos = database::get_random_videos(
-        config.selecting.next_videos_fetch_amount_matching_hashtag
-            + config.selecting.next_videos_fetch_amount_random,
-        db_pool,
-    )
-    .await?;
+    let hashtag = weighted_random(user.ranked_hashtags, config.selecting.user_hashtag_decay_factor);
+    if hashtag.is_none() {
+        warn!("Selecting searching hashtag of user: `{}` failed!", user.uuid);
+    }
+    
+    let fetched_videos = database::fetch_next_videos(config, hashtag.unwrap(), db_pool).await?;
+    let random_vids = fetched_videos.0;
+    let hashtag_vids = fetched_videos.1;
 
-    //Score Videos
-    let mut scored_personalized_videos = fetched_videos
+    let mut scored_random_vids = random_vids
         .into_iter()
         .map(|mut video| {
             video.score = score_video_personalized(user, &video, config);
@@ -38,9 +60,17 @@ pub async fn next_videos(
         .collect::<Vec<Video>>();
 
     //Sort => lowest first.
-    scored_personalized_videos.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+    scored_random_vids.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
 
     let mut final_sort: Vec<Video> = Vec::new();
+
+    if random_bool(config.selecting.hashtag_to_random_video_probability) {
+        
+        //Hashtag Video
+        
+    } else {
+        //Scored Video
+    }
 
     let mut high_score_video_chosen = 0;
     for (i, _) in scored_personalized_videos.iter().enumerate() {
