@@ -101,10 +101,7 @@ fn setup_logger() {
         "WARN" => LevelFilter::Warn,
         "TRACE" => LevelFilter::Trace,
         "OFF" => LevelFilter::Off,
-        _ => {
-            println!("Unsupported log level: {}, switching to {}", log_level, "INFO".green());
-            LevelFilter::Info
-        },
+        _ => { panic!("Unknown log level: {log_level}") },
     };
 
     Builder::new()
