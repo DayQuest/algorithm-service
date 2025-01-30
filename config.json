@@ -15,6 +15,7 @@
   },
 
   "selecting": {
+    "user_hashtag_fetch_amount": 100,
     "select_high_freq_hashtag_probability": 0.7,
     "user_hashtag_decay_factor": 0.5,
     "hashtag_2_random_video_probability": 0.2,

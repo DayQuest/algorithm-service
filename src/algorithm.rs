@@ -1,4 +1,4 @@
-use std::{error::Error, time::Instant};
+use std::{collections::HashMap, error::Error, time::Instant};
 
 use crate::{
     config::Config,
@@ -50,6 +50,19 @@ fn score_sort_random_videos(videos: Vec<Video>, user: &User, config: &Config) ->
     scored_random_vids
 }
 
+fn sort_user_hashtags_by_frequency(user: &User) -> Vec<String> {
+    let mut frequency_map: HashMap<&String, usize> = HashMap::new();
+    
+    for hashtag in &user.last_hashtags {
+        *frequency_map.entry(hashtag).or_insert(0) += 1;
+    }
+    
+    let mut sorted_hashtags: Vec<_> = frequency_map.into_iter().collect();
+    sorted_hashtags.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+    
+    sorted_hashtags.into_iter().map(|(hashtag, _)| hashtag.clone()).collect()
+}
+
 fn count_total_hashtag_overlap(video_hashtags: &Vec<String>, all_videos: &[Video]) -> usize {
     all_videos
         .iter()
@@ -85,7 +98,7 @@ pub async fn next_videos(
 ) -> Result<Vec<Video>, Box<dyn Error>> {
     let start_time = Instant::now();
     let hashtag = weighted_random(
-        &user.ranked_hashtags,
+        &sort_user_hashtags_by_frequency(user), // Sorts by frequency, so i = 0 is the most "liked" hashtag
         config.selecting.user_hashtag_decay_factor,
     );
 

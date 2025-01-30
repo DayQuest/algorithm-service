@@ -20,7 +20,7 @@ pub trait DatabaseModel<T> {
 pub struct User {
     pub liked_videos: Vec<String>,
     pub following: Vec<String>,
-    pub ranked_hashtags: Vec<String>,
+    pub last_hashtags: Vec<String>, //Last liked hashtag, filtered by timestamp
 }
 
 impl DatabaseModel<User> for User {
@@ -42,6 +42,8 @@ impl DatabaseModel<User> for User {
         .bind(uuid)
         .fetch_all(db_pool)
         .await?;
+        
+        
 
         let mut liked_videos = Vec::new();
         let mut following = Vec::new();
@@ -57,7 +59,7 @@ impl DatabaseModel<User> for User {
         }
 
         Ok(Self {
-            ranked_hashtags: vec![], //TODO
+            last_hashtags: vec![], //TODO
             liked_videos,
             following,
         })

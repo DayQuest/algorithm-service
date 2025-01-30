@@ -36,6 +36,7 @@ pub const VIDEO_HASHTAGS_COLUMN: &str = "hashtags";
 pub const VIDEO_DOWN_VOTES_COLUMN: &str = "down_votes";
 pub const VIDEO_VIEWS_COLUMN: &str = "views";
 pub const VIDEO_VIEWTIME_COLUMN: &str = "viewtime_seconds";
+pub const TIMESTAMP_COLUMN: &str = "timestamp";
 
 pub fn load() -> Config {
     let config = Figment::new().merge(Json::file(FILE_PATH));
@@ -113,6 +114,7 @@ pub struct ScoringConfig {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct SelectingConfig {
     pub select_high_freq_hashtag_probability: f64,
+    pub user_hashtag_fetch_amount: u32,
     pub user_hashtag_decay_factor: f64,
     pub hashtag_2_random_video_probability: f64,
     pub high_score_video_probability: f64,
