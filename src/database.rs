@@ -209,7 +209,7 @@ fn process_video_row(row: MySqlRow) -> Result<Video, Error> {
         views: row.try_get(VIDEO_VIEWS_COLUMN)?,
         comments: row.try_get(VIDEO_COMMENTS_COLUMN)?,
         viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
-        hashtags: serde_json::from_value(row.try_get::<Value, _>(VIDEO_HASHTAGS_COLUMN)?).unwrap(),
+        hashtags: serde_json::from_value(row.try_get::<Value, _>(VIDEO_HASHTAGS_COLUMN)?).unwrap_or(vec![]),
         score: 0.,
     })
 }
