@@ -35,7 +35,7 @@ pub async fn score_video(
             Ok(Json(ScoreVideoResponse { score }))
         }
         Err(why) => {
-            error!("Error retrieving video data: {}", why);
+            warn!("Error retrieving video data (maybe video id 404): {} ", why);
             Err(StatusCode::NOT_FOUND)
         }
     }

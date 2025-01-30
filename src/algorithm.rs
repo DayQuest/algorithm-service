@@ -97,6 +97,7 @@ pub async fn next_videos(
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Box<dyn Error>> {
     let start_time = Instant::now();
+    debug!("User: likes: {:?}, followed: {:?}, hashtags: {:?}", user.liked_videos, user.following, user.last_hashtags);
     let hashtag = weighted_random(
         &sort_user_hashtags_by_frequency(user), // Sorts by frequency, so i = 0 is the most "liked" hashtag
         config.selecting.user_hashtag_decay_factor,
