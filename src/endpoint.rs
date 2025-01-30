@@ -1,7 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{sync::{Arc, Mutex}, time::Instant};
 
 use axum::{http::StatusCode, Extension, Json};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::MySqlPool;
@@ -96,6 +96,7 @@ pub async fn next_videos(
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<NextVideosRequest>,
 ) -> Result<Json<NextVideosResponse>, StatusCode> {
+    let start_time = Instant::now();
     let config = config.lock().unwrap().clone();
     let user = User::from_db(&payload.user_id, &db_pool, &config)
         .await
@@ -103,7 +104,7 @@ pub async fn next_videos(
             warn!("Fetching user failed: {why}");
             return Err(StatusCode::NOT_FOUND);
         })?;
-
+    
     let videos = algorithm::next_videos(&user, &config, &db_pool)
         .await
         .or_else(|why| {
@@ -114,6 +115,7 @@ pub async fn next_videos(
         .map(|video| video.uuid.clone())
         .collect::<Vec<String>>();
 
+    debug!("Processing next videos request took: {} ms", start_time.elapsed().as_millis());
     Ok(Json(NextVideosResponse { videos }))
 }
 

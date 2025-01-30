@@ -87,7 +87,7 @@ impl DatabaseModel<User> for User {
     async fn from_db(uuid: &str, db_pool: &MySqlPool, config: &Config) -> Result<Self, Error> {
         let start_time = Instant::now();
 
-        // May return to non-parralel if concurrency too high
+        // May return to non-parallel if concurrency too high
         let (liked_videos, following, last_hashtags) = tokio::try_join!(
             fetch_liked_videos(uuid, db_pool),
             fetch_following(uuid, db_pool),
