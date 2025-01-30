@@ -37,6 +37,7 @@ async fn main() {
         .filter_level(LevelFilter::Debug)
         .format_target(false)
         .init();
+    
     info!("Starting..");
     if let Ok(_) = dotenv() {
         info!("Loaded .env file {}", "(development only)".yellow())
@@ -53,10 +54,10 @@ async fn main() {
         .await
         .expect(format!("Failed to bind to: {addr}").as_str());
 
-    let db_pool = connect_db().await;
+    let db_pool = connect_db(&config).await;
 
     info!(
-        "Listening on {addr}, ({} ms)",
+        "Done, listening on {addr}, ({} ms)",
         Instant::elapsed(&start_time).as_millis()
     );
 
@@ -93,12 +94,12 @@ fn app(config: Config, db_pool: Option<MySqlPool>) -> Router {
     final_router
 }
 
-async fn connect_db() -> MySqlPool {
+async fn connect_db(config: &Config) -> MySqlPool {
     let connection_url = env::var(DATABASE_CONN_URL_KEY)
         .expect("Failed to get database connection url out of environment");
 
     let pool = MySqlPoolOptions::new()
-        .max_connections(5)
+        .max_connections(config.max_dbpool_connections)
         .connect(&connection_url)
         .await
         .expect("Failed to connect to database");

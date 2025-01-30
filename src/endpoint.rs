@@ -1,7 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{sync::{Arc, Mutex}, time::Instant};
 
-use axum::{debug_handler, http::StatusCode, Extension, Json};
-use log::{error, info, warn};
+use axum::{http::StatusCode, Extension, Json};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::MySqlPool;
@@ -22,19 +22,20 @@ pub struct ScoreVideoRequest {
     uuid: String,
 }
 
-//#[debug_handler] 
+//#[debug_handler]
 pub async fn score_video(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<ScoreVideoRequest>,
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
-    match Video::from_db(&payload.uuid, &db_pool).await {
+    let config = config.lock().unwrap().clone();
+    match Video::from_db(&payload.uuid, &db_pool, &config).await {
         Ok(video) => {
-            let score = algorithm::score_video(&video, &config.lock().unwrap());
+            let score = algorithm::score_video(&video, &config);
             Ok(Json(ScoreVideoResponse { score }))
         }
         Err(why) => {
-            error!("Error retrieving video data: {}", why);
+            warn!("Error retrieving video data (maybe video id 404): {} ", why);
             Err(StatusCode::NOT_FOUND)
         }
     }
@@ -51,16 +52,18 @@ pub struct PersonalizeVideoRequest {
     video_id: String,
 }
 
-#[debug_handler]
+//#[debug_handler]
 pub async fn score_video_personalized(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<PersonalizeVideoRequest>,
 ) -> Result<Json<PersonalizeScoreResponse>, StatusCode> {
-    match Video::from_db(&payload.video_id, &db_pool).await {
-        Ok(video) => match User::from_db(&payload.user_id, &db_pool).await {
+    let config = config.lock().unwrap().clone();
+    match Video::from_db(&payload.video_id, &db_pool, &config).await {
+        Ok(video) => match User::from_db(&payload.user_id, &db_pool, &config).await {
             Ok(user) => {
-                let score = algorithm::score_video_personalized(&user, &video, &config.lock().unwrap());
+                let score =
+                    algorithm::score_video_personalized(&user, &video, &config);
                 Ok(Json(PersonalizeScoreResponse { score }))
             }
 
@@ -93,14 +96,15 @@ pub async fn next_videos(
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<NextVideosRequest>,
 ) -> Result<Json<NextVideosResponse>, StatusCode> {
+    let start_time = Instant::now();
     let config = config.lock().unwrap().clone();
-    let user = User::from_db(&payload.user_id, &db_pool)
+    let user = User::from_db(&payload.user_id, &db_pool, &config)
         .await
         .or_else(|why| {
             warn!("Fetching user failed: {why}");
-           return Err(StatusCode::NOT_FOUND);
+            return Err(StatusCode::NOT_FOUND);
         })?;
-
+    
     let videos = algorithm::next_videos(&user, &config, &db_pool)
         .await
         .or_else(|why| {
@@ -111,6 +115,7 @@ pub async fn next_videos(
         .map(|video| video.uuid.clone())
         .collect::<Vec<String>>();
 
+    debug!("Processing next videos request took: {} ms", start_time.elapsed().as_millis());
     Ok(Json(NextVideosResponse { videos }))
 }
 
