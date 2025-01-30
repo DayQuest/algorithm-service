@@ -1,5 +1,5 @@
 {
-  "config_name": "development_hashtag_f_V1",
+  "config_name": "beta-v1",
   "max_dbpool_connections": 10,
   "scoring": {
     "comments_2_votes_strength": 0.9,
@@ -16,7 +16,7 @@
 
   "selecting": {
     "user_hashtag_fetch_amount": 100,
-    "select_high_freq_hashtag_probability": 0.7,
+    "select_high_freq_hashtag_probability": 0.65,
     "hashtag_2_random_video_probability": 0.2,
     "high_score_after_hashtag_video_probability": 0.2,
     "high_score_video_probability": 0.1,
