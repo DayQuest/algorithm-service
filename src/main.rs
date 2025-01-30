@@ -56,7 +56,7 @@ async fn main() {
     let db_pool = connect_db(&config).await;
 
     info!(
-        "Listening on {addr}, ({} ms)",
+        "Done, listening on {addr}, ({} ms)",
         Instant::elapsed(&start_time).as_millis()
     );
 
