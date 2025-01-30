@@ -9,11 +9,11 @@ use crate::config::{
     Config, DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE,
     FOLLOWED_USERS_COLUMN, USER_ID_COLUMN, UUID_COLUMN, VIDEO_COMMENTS_COLUMN,
     VIDEO_DOWN_VOTES_COLUMN, VIDEO_HASHTAGS_COLUMN, VIDEO_ID_COLUMN, VIDEO_READY_STATUS,
-    VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN,
+    VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN, TIMESTAMP_COLUMN
 };
 
 pub trait DatabaseModel<T> {
-    async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<T, Error>;
+    async fn from_db(uuid: &str, db_pool: &MySqlPool, config: &Config) -> Result<T, Error>;
 }
 
 #[derive(Clone)]
@@ -23,45 +23,77 @@ pub struct User {
     pub last_hashtags: Vec<String>, //Last liked hashtag, filtered by timestamp
 }
 
+async fn fetch_liked_videos(uuid: &str, db_pool: &MySqlPool) -> Result<Vec<String>, Error> {
+    Ok(query(&format!(
+        "SELECT {VIDEO_ID_COLUMN} 
+         FROM {DB_LIKED_VIDEOS_TABLE}
+         WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
+    ))
+    .bind(uuid)
+    .fetch_all(db_pool)
+    .await?
+    .into_iter()
+    .filter_map(|row| row.try_get::<String, _>(VIDEO_ID_COLUMN).ok())
+    .collect())
+}
+
+async fn fetch_following(uuid: &str, db_pool: &MySqlPool) -> Result<Vec<String>, Error> {
+    Ok(query(&format!(
+        "SELECT {FOLLOWED_USERS_COLUMN} 
+         FROM {DB_USER_FOLLOWED_USER_TABLE}
+         WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
+    ))
+    .bind(uuid)
+    .fetch_all(db_pool)
+    .await?
+    .into_iter()
+    .filter_map(|row| row.try_get::<String, _>(FOLLOWED_USERS_COLUMN).ok())
+    .collect())
+}
+
+async fn fetch_hashtags(uuid: &str, db_pool: &MySqlPool, amount: u32) -> Result<Vec<String>, Error> {
+    let rows = query(&format!(
+           "SELECT V.{VIDEO_HASHTAGS_COLUMN}
+            FROM {DB_LIKED_VIDEOS_TABLE} LV
+            JOIN {DB_VIDEO_TABLE} V ON UUID_TO_BIN(LV.{VIDEO_ID_COLUMN}) = V.{UUID_COLUMN}
+            WHERE LV.{USER_ID_COLUMN} = UUID_TO_BIN(?)
+            ORDER BY LV.{TIMESTAMP_COLUMN} DESC
+            LIMIT ?"
+       ))
+       .bind(uuid)
+       .bind(amount)
+       .fetch_all(db_pool)
+       .await?;
+
+    Ok(rows.into_iter()
+        .filter_map(|row| {
+            row.try_get::<String, _>(VIDEO_HASHTAGS_COLUMN)
+                .ok()
+                .map(|hashtags_str| {
+                    serde_json::from_str::<Vec<String>>(&hashtags_str).unwrap_or_default()
+                })
+        })
+        .flatten()
+        .collect::<Vec<String>>())
+}
+
 impl DatabaseModel<User> for User {
-    async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Self, Error> {
-        let rows = query(&format!(
-            "
-            SELECT {VIDEO_ID_COLUMN} AS id, 'liked_video' AS source
-            FROM {DB_LIKED_VIDEOS_TABLE}
-            WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
+    async fn from_db(uuid: &str, db_pool: &MySqlPool, config: &Config) -> Result<Self, Error> {
+        let start_time = Instant::now();
 
-            UNION
+        // May return to non-parralel if concurrency too high
+        let (liked_videos, following, last_hashtags) = tokio::try_join!(
+            fetch_liked_videos(uuid, db_pool),
+            fetch_following(uuid, db_pool),
+            fetch_hashtags(uuid, db_pool, config.selecting.user_hashtag_fetch_amount)
+        )?;
 
-            SELECT {FOLLOWED_USERS_COLUMN} AS id, 'followed_user' AS source
-            FROM {DB_USER_FOLLOWED_USER_TABLE}
-            WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
-            "
-        ))
-        .bind(uuid)
-        .bind(uuid)
-        .fetch_all(db_pool)
-        .await?;
-        
-        
-
-        let mut liked_videos = Vec::new();
-        let mut following = Vec::new();
-
-        for row in rows {
-            let id: String = row.try_get("id")?;
-            let source: String = row.try_get("source")?;
-            match source.as_str() {
-                "liked_video" => liked_videos.push(id),
-                "followed_user" => following.push(id),
-                _ => (),
-            }
-        }
+        debug!("Fetching user took: {} ms",start_time.elapsed().as_millis());
 
         Ok(Self {
-            last_hashtags: vec![], //TODO
             liked_videos,
             following,
+            last_hashtags,
         })
     }
 }
@@ -82,7 +114,7 @@ pub struct Video {
 }
 
 impl DatabaseModel<Video> for Video {
-    async fn from_db(uuid: &str, db_pool: &MySqlPool) -> Result<Video, Error> {
+    async fn from_db(uuid: &str, db_pool: &MySqlPool, _config: &Config) -> Result<Video, Error> {
         let row = query(&format!(
             "SELECT {USER_ID_COLUMN},
             {VIDEO_HASHTAGS_COLUMN},
@@ -114,6 +146,79 @@ impl DatabaseModel<Video> for Video {
     }
 }
 
+async fn fetch_random_videos(
+    config: &Config,
+    db_pool: &MySqlPool,
+) -> Result<Vec<Video>, Error> {
+    let videos = query(&format!(
+        "SELECT {UUID_COLUMN},
+                {USER_ID_COLUMN},
+                {VIDEO_HASHTAGS_COLUMN},
+                {VIDEO_COMMENTS_COLUMN},
+                {VIDEO_UP_VOTES_COLUMN},
+                {VIDEO_DOWN_VOTES_COLUMN},
+                {VIDEO_VIEWS_COLUMN},
+                {VIDEO_VIEWTIME_COLUMN}
+         FROM {DB_VIDEO_TABLE}
+         WHERE {VIDEO_STATUS_COLUMN} = ?
+         ORDER BY RAND()
+         LIMIT ?"
+    ))
+    .bind(VIDEO_READY_STATUS)
+    .bind(config.selecting.next_videos_fetch_amount_random)
+    .fetch_all(db_pool)
+    .await?;
+
+    process_video_rows(videos)
+}
+
+async fn fetch_hashtag_videos(
+    config: &Config,
+    hashtag: &str,
+    db_pool: &MySqlPool,
+) -> Result<Vec<Video>, Error> {
+    let videos = query(&format!(
+        "SELECT {UUID_COLUMN},
+                {USER_ID_COLUMN},
+                {VIDEO_HASHTAGS_COLUMN},
+                {VIDEO_COMMENTS_COLUMN},
+                {VIDEO_UP_VOTES_COLUMN},
+                {VIDEO_DOWN_VOTES_COLUMN},
+                {VIDEO_VIEWS_COLUMN},
+                {VIDEO_VIEWTIME_COLUMN}
+         FROM {DB_VIDEO_TABLE}
+         WHERE {VIDEO_STATUS_COLUMN} = ?
+           AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)
+         LIMIT ?"
+    ))
+    .bind(VIDEO_READY_STATUS)
+    .bind(hashtag)
+    .bind(config.selecting.next_videos_fetch_amount_matching_hashtag)
+    .fetch_all(db_pool)
+    .await?;
+
+    process_video_rows(videos)
+}
+
+fn process_video_rows(rows: Vec<sqlx::mysql::MySqlRow>) -> Result<Vec<Video>, Error> {
+    Ok(rows.into_iter()
+        .filter_map(|row| {
+            let video_result = Video {
+                uuid: Uuid::from_slice(row.try_get("UUID_COLUMN").ok()?).ok()?.to_string(),
+                user_id: Uuid::from_slice(row.try_get("USER_ID_COLUMN").ok()?).ok()?.to_string(),
+                upvotes: row.try_get("VIDEO_UP_VOTES_COLUMN").ok()?,
+                downvotes: row.try_get("VIDEO_DOWN_VOTES_COLUMN").ok()?,
+                views: row.try_get("VIDEO_VIEWS_COLUMN").ok()?,
+                comments: row.try_get("VIDEO_COMMENTS_COLUMN").ok()?,
+                viewtime_seconds: row.try_get("VIDEO_VIEWTIME_COLUMN").ok()?,
+                hashtags: from_str(row.try_get("VIDEO_HASHTAGS_COLUMN").ok()?).unwrap_or_default(),
+                score: 0.,
+            };
+            Some(video_result)
+        })
+        .collect::<Vec<Video>>())
+}
+
 pub async fn fetch_next_videos(
     config: &Config,
     hashtag: String,
@@ -121,89 +226,10 @@ pub async fn fetch_next_videos(
 ) -> Result<(Vec<Video>, Vec<Video>), Error> {
     let start_time = Instant::now();
 
-    let videos = sqlx::query(&format!(
-        "(
-            SELECT UUID_COLUMN,
-                   {USER_ID_COLUMN},
-                   {VIDEO_HASHTAGS_COLUMN},
-                   {VIDEO_COMMENTS_COLUMN},
-                   {VIDEO_UP_VOTES_COLUMN},
-                   {VIDEO_DOWN_VOTES_COLUMN},
-                   {VIDEO_VIEWS_COLUMN},
-                   {VIDEO_VIEWTIME_COLUMN},
-                   'random' AS source
-            FROM {DB_VIDEO_TABLE}
-            WHERE {VIDEO_STATUS_COLUMN} = ?
-            ORDER BY RAND()
-            LIMIT ?
-        )
-        UNION ALL
-        (
-            SELECT {UUID_COLUMN},
-                   {USER_ID_COLUMN},
-                   {VIDEO_HASHTAGS_COLUMN},
-                   {VIDEO_COMMENTS_COLUMN},
-                   {VIDEO_UP_VOTES_COLUMN},
-                   {VIDEO_DOWN_VOTES_COLUMN},
-                   {VIDEO_VIEWS_COLUMN},
-                   {VIDEO_VIEWTIME_COLUMN},
-                   'hashtag_match' AS source
-            FROM {DB_VIDEO_TABLE}
-            WHERE {VIDEO_STATUS_COLUMN} = ? 
-              AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)
-            LIMIT ?
-        );"
-    ))
-    .bind(VIDEO_READY_STATUS)
-    .bind(config.selecting.next_videos_fetch_amount_random)
-    .bind(VIDEO_READY_STATUS)
-    .bind(hashtag)
-    .bind(config.selecting.next_videos_fetch_amount_matching_hashtag)
-    .fetch_all(db_pool)
-    .await?;
-
-    let (random_videos, hashtag_videos): (Vec<Video>, Vec<Video>) = videos.iter().fold(
-        (Vec::new(), Vec::new()),
-        |(mut random_videos, mut hashtag_videos), row| {
-            let video_result = (|| -> Result<Video, Error> {
-                Ok(Video {
-                    uuid: Uuid::from_slice(row.try_get("UUID_COLUMN")?)
-                        .unwrap()
-                        .to_string(),
-                    user_id: Uuid::from_slice(row.try_get("USER_ID_COLUMN")?)
-                        .unwrap()
-                        .to_string(),
-                    upvotes: row.try_get("VIDEO_UP_VOTES_COLUMN")?,
-                    downvotes: row.try_get("VIDEO_DOWN_VOTES_COLUMN")?,
-                    views: row.try_get("VIDEO_VIEWS_COLUMN")?,
-                    comments: row.try_get("VIDEO_COMMENTS_COLUMN")?,
-                    viewtime_seconds: row.try_get("VIDEO_VIEWTIME_COLUMN")?,
-                    hashtags: from_str(row.try_get("VIDEO_HASHTAGS_COLUMN")?)
-                        .unwrap_or_else(|_| vec![]),
-                    score: 0.,
-                })
-            })();
-
-            match video_result {
-                Ok(video) => {
-                    match row
-                        .try_get::<String, _>("source")
-                        .unwrap_or_default()
-                        .as_str()
-                    {
-                        "random" => random_videos.push(video),
-                        "hashtag_match" => hashtag_videos.push(video),
-                        _ => (),
-                    }
-                }
-                Err(err) => {
-                    eprintln!("Error processing video row: {:?}", err);
-                }
-            }
-
-            (random_videos, hashtag_videos)
-        },
-    );
+    let (random_videos, hashtag_videos) = tokio::try_join!(
+        fetch_random_videos(config, db_pool),
+        fetch_hashtag_videos(config, &hashtag, db_pool)
+    )?;
 
     debug!(
         "Fetching videos took: {} ms",

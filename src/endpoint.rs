@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use axum::{debug_handler, http::StatusCode, Extension, Json};
+use axum::{http::StatusCode, Extension, Json};
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -28,9 +28,10 @@ pub async fn score_video(
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<ScoreVideoRequest>,
 ) -> Result<Json<ScoreVideoResponse>, StatusCode> {
-    match Video::from_db(&payload.uuid, &db_pool).await {
+    let config = config.lock().unwrap().clone();
+    match Video::from_db(&payload.uuid, &db_pool, &config).await {
         Ok(video) => {
-            let score = algorithm::score_video(&video, &config.lock().unwrap());
+            let score = algorithm::score_video(&video, &config);
             Ok(Json(ScoreVideoResponse { score }))
         }
         Err(why) => {
@@ -51,17 +52,18 @@ pub struct PersonalizeVideoRequest {
     video_id: String,
 }
 
-#[debug_handler]
+//#[debug_handler]
 pub async fn score_video_personalized(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,
     Json(payload): Json<PersonalizeVideoRequest>,
 ) -> Result<Json<PersonalizeScoreResponse>, StatusCode> {
-    match Video::from_db(&payload.video_id, &db_pool).await {
-        Ok(video) => match User::from_db(&payload.user_id, &db_pool).await {
+    let config = config.lock().unwrap().clone();
+    match Video::from_db(&payload.video_id, &db_pool, &config).await {
+        Ok(video) => match User::from_db(&payload.user_id, &db_pool, &config).await {
             Ok(user) => {
                 let score =
-                    algorithm::score_video_personalized(&user, &video, &config.lock().unwrap());
+                    algorithm::score_video_personalized(&user, &video, &config);
                 Ok(Json(PersonalizeScoreResponse { score }))
             }
 
@@ -95,7 +97,7 @@ pub async fn next_videos(
     Json(payload): Json<NextVideosRequest>,
 ) -> Result<Json<NextVideosResponse>, StatusCode> {
     let config = config.lock().unwrap().clone();
-    let user = User::from_db(&payload.user_id, &db_pool)
+    let user = User::from_db(&payload.user_id, &db_pool, &config)
         .await
         .or_else(|why| {
             warn!("Fetching user failed: {why}");
