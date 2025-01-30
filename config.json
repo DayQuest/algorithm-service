@@ -1,5 +1,5 @@
 {
-  "config_name": "developing_V1",
+  "config_name": "development_hashtag_f_V1",
   "max_dbpool_connections": 10,
   "scoring": {
     "comments_2_votes_strength": 0.9,
