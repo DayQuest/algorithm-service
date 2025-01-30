@@ -18,6 +18,7 @@
     "user_hashtag_fetch_amount": 100,
     "select_high_freq_hashtag_probability": 0.7,
     "hashtag_2_random_video_probability": 0.2,
+    "high_score_after_hashtag_video_probability": 0.2,
     "high_score_video_probability": 0.1,
     "next_videos_amount": 15,
     "next_videos_fetch_amount_matching_hashtag": 10,

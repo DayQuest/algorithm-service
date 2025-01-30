@@ -36,7 +36,7 @@ where
     Some(vec[index].clone())
 }
 
-fn score_sort_random_videos(videos: Vec<Video>, user: &User, config: &Config) -> Vec<Video> {
+fn score_sort_videos(videos: Vec<Video>, user: &User, config: &Config) -> Vec<Video> {
     let mut scored_random_vids = videos
         .into_iter()
         .map(|mut video| {
@@ -52,17 +52,19 @@ fn score_sort_random_videos(videos: Vec<Video>, user: &User, config: &Config) ->
 
 fn sort_user_hashtags_by_frequency(user: &User) -> Vec<String> {
     let mut frequency_map: HashMap<&String, usize> = HashMap::new();
-    
+
     for hashtag in &user.last_hashtags {
         *frequency_map.entry(hashtag).or_insert(0) += 1;
     }
-    
+
     let mut sorted_hashtags: Vec<_> = frequency_map.into_iter().collect();
     sorted_hashtags.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
-    
-    sorted_hashtags.into_iter().map(|(hashtag, _)| hashtag.clone()).collect()
-}
 
+    sorted_hashtags
+        .into_iter()
+        .map(|(hashtag, _)| hashtag.clone())
+        .collect()
+}
 
 pub async fn next_videos(
     user: &User,
@@ -70,10 +72,13 @@ pub async fn next_videos(
     db_pool: &MySqlPool,
 ) -> Result<Vec<Video>, Box<dyn Error>> {
     let start_time = Instant::now();
-    debug!("User: likes: {:?}, followed: {:?}, hashtags: {:?}", user.liked_videos, user.following, user.last_hashtags);
+    debug!(
+        "User: likes: {:?}, followed: {:?}, hashtags: {:?}",
+        user.liked_videos, user.following, user.last_hashtags
+    );
     let selected_hashtag = weighted_random(
         &sort_user_hashtags_by_frequency(user), // Sorts by frequency, so i = 0 is the most "liked" hashtag
-        config.selecting.user_hashtag_decay_factor,
+        config.selecting.select_high_freq_hashtag_probability,
     );
 
     let fetched_videos = database::fetch_next_videos(
@@ -83,36 +88,47 @@ pub async fn next_videos(
     )
     .await?;
 
-    let hashtag_videos = fetched_videos.1;
-    let sorted_rand_scored_vids = score_sort_random_videos(fetched_videos.0, user, config);
+    // Hashtag videos orderd by high and low score
+    let sorted_hashtag_videos = score_sort_videos(fetched_videos.1, user, config);
+
+    // Random videos orderd by high and low score
+    let sorted_rand_scored_vids = score_sort_videos(fetched_videos.0, user, config);
 
     let mut final_sort: Vec<Video> = Vec::new();
 
-    let mut high_score_video_chosen = 0;
-    for i in 0..sorted_rand_scored_vids.len() + hashtag_videos.len() {
+    let mut high_score_rand_video_chosen = 0;
+    let mut high_score_hashtag_video_chosen = 0;
+    for i in 0..sorted_rand_scored_vids.len() + sorted_hashtag_videos.len() {
         if i >= config.selecting.next_videos_amount.try_into().unwrap() {
             break;
         }
 
-        if selected_hashtag.is_some() && random_bool(config.selecting.hashtag_2_random_video_probability) {
-            // Hashtag Video
-            let chosen = weighted_random(
-                &hashtag_videos,
-                config.selecting.select_high_freq_hashtag_probability,
-            )
-            .unwrap();
-
-            final_sort.push(chosen);
-        } else {
-            // Non-Hashtag or random video
-            if random_bool(config.selecting.high_score_video_probability) {
-                //Put a high scored video in
-                let video = sorted_rand_scored_vids
-                    .get(sorted_rand_scored_vids.len() - high_score_video_chosen - 1)
+        if selected_hashtag.is_some()
+            && random_bool(config.selecting.hashtag_2_random_video_probability)
+        {
+            // Choose between high or low scored hashtag video
+            if random_bool(config.selecting.high_score_after_hashtag_video_probability) {
+                // Matching hashtag & high score
+                let video = sorted_hashtag_videos
+                    .get(sorted_hashtag_videos.len() - high_score_hashtag_video_chosen - 1)
                     .unwrap();
                 final_sort.push(video.clone());
-                high_score_video_chosen += 1;
+                high_score_hashtag_video_chosen += 1;
             } else {
+                // Matching hashtag & low score
+                final_sort.push(sorted_hashtag_videos.get(i).unwrap().clone());
+            }
+        } else {
+            // Random video
+            if random_bool(config.selecting.high_score_video_probability) {
+                // Put a high scored video in
+                let video = sorted_rand_scored_vids
+                    .get(sorted_rand_scored_vids.len() - high_score_rand_video_chosen - 1)
+                    .unwrap();
+                final_sort.push(video.clone());
+                high_score_rand_video_chosen += 1;
+            } else {
+                // Random low score
                 final_sort.push(sorted_rand_scored_vids.get(i).unwrap().clone());
             }
         }

@@ -163,33 +163,39 @@ pub struct SelectingConfig {
     // This value decides how likely it is to select a hashtag the user likes often
     // so a hashtag with a high repeat rate.
     pub select_high_freq_hashtag_probability: f64,
-    
+
     // This is how many liked videos should be
     // fetched for hashtag analytics. This should be
     // way more than actual hashtag video fetch amount.
     pub user_hashtag_fetch_amount: u32,
-    
+
     // The algorithm will decide (next_videos_amount times) if the user
     // gets a score video or a hashtag video. This value will decide
     // how likely it is that the algorithm choses a HASHTAG video.
     // The lower this value is the more the algorithm will put in a video
     // by its score and not by its mathing hashtag with the user liked hashtag
     pub hashtag_2_random_video_probability: f64,
-    
+
     // If the algorithm chose a score defined video this will decide
     // if how likely it is to get a high scored video. The lower this value
     // the more likely is it get "non-viral" videos. This value
     // is relevant in combination with the "hashtag_2_random_video_probability"!
     pub high_score_video_probability: f64,
-    
-    // The amount of videos the next videos endpoint will 
+
+    // If the algorithm chose a hashtag video it will again choose
+    // if it will use a high scored hashtag video or a low scored hashtag video.
+    // This probabilty decides how likely the user will get a high scored
+    // video (which also matches his hashtag, thats why this value should be low)
+    pub high_score_after_hashtag_video_probability: f64,
+
+    // The amount of videos the next videos endpoint will
     // return. This value needs to be lower than the values underneath.
     pub next_videos_amount: u32,
-    
+
     // This value decides how many matching hashtag videos will be fetched
     // for the next videos algorithm
     pub next_videos_fetch_amount_matching_hashtag: u32,
-    
+
     // This value decides how many non-matching or random
     // videos will be fetched from the database.
     // This should be near the next videos amount.

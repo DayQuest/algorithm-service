@@ -1,7 +1,6 @@
 use std::time::Instant;
 
 use log::debug;
-use serde_json::Value;
 use sqlx::{mysql::MySqlRow, query, Error, MySqlPool, Row};
 use uuid::Uuid;
 
@@ -115,7 +114,6 @@ pub struct Video {
     pub downvotes: i32,
     pub views: i32,
     pub comments: i32,
-    pub hashtags: Vec<String>,
     pub viewtime_seconds: i64,
 
     //Not saved in the database, a variable to set later
@@ -128,7 +126,6 @@ impl DatabaseModel<Video> for Video {
             "SELECT
             {UUID_COLUMN},
             {USER_ID_COLUMN},
-            {VIDEO_HASHTAGS_COLUMN},
             {VIDEO_COMMENTS_COLUMN},
             {VIDEO_UP_VOTES_COLUMN},
             {VIDEO_DOWN_VOTES_COLUMN},
@@ -147,7 +144,6 @@ async fn fetch_random_videos(config: &Config, db_pool: &MySqlPool) -> Result<Vec
     let videos = query(&format!(
         "SELECT {UUID_COLUMN},
                 {USER_ID_COLUMN},
-                {VIDEO_HASHTAGS_COLUMN},
                 {VIDEO_COMMENTS_COLUMN},
                 {VIDEO_UP_VOTES_COLUMN},
                 {VIDEO_DOWN_VOTES_COLUMN},
@@ -175,7 +171,6 @@ async fn fetch_hashtag_videos(
     let videos = query(&format!(
         "SELECT {UUID_COLUMN},
                 {USER_ID_COLUMN},
-                {VIDEO_HASHTAGS_COLUMN},
                 {VIDEO_COMMENTS_COLUMN},
                 {VIDEO_UP_VOTES_COLUMN},
                 {VIDEO_DOWN_VOTES_COLUMN},
@@ -196,7 +191,6 @@ async fn fetch_hashtag_videos(
 }
 
 fn process_video_row(row: MySqlRow) -> Result<Video, Error> {
-   
     Ok(Video {
         uuid: Uuid::from_slice(row.try_get(UUID_COLUMN)?)
             .unwrap()
@@ -209,7 +203,6 @@ fn process_video_row(row: MySqlRow) -> Result<Video, Error> {
         views: row.try_get(VIDEO_VIEWS_COLUMN)?,
         comments: row.try_get(VIDEO_COMMENTS_COLUMN)?,
         viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
-        hashtags: serde_json::from_value(row.try_get::<Value, _>(VIDEO_HASHTAGS_COLUMN)?).unwrap_or(vec![]),
         score: 0.,
     })
 }
