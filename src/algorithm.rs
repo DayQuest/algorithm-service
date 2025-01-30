@@ -63,33 +63,6 @@ fn sort_user_hashtags_by_frequency(user: &User) -> Vec<String> {
     sorted_hashtags.into_iter().map(|(hashtag, _)| hashtag.clone()).collect()
 }
 
-fn count_total_hashtag_overlap(video_hashtags: &Vec<String>, all_videos: &[Video]) -> usize {
-    all_videos
-        .iter()
-        .filter(|other_video| &other_video.hashtags != video_hashtags)
-        .map(|other_video| {
-            video_hashtags
-                .iter()
-                .filter(|hashtag| other_video.hashtags.contains(*hashtag))
-                .count()
-        })
-        .sum()
-}
-
-fn sort_hashtags(videos: Vec<Video>) -> Vec<Video> {
-    let mut videos_with_overlap: Vec<(Video, usize)> = videos
-        .iter()
-        .map(|video| {
-            let overlap_count = count_total_hashtag_overlap(&video.hashtags, &videos);
-            (video.clone(), overlap_count)
-        })
-        .collect();
-    videos_with_overlap.sort_by(|a, b| b.1.cmp(&a.1));
-    videos_with_overlap
-        .into_iter()
-        .map(|(video, _)| video)
-        .collect()
-}
 
 pub async fn next_videos(
     user: &User,
@@ -98,33 +71,33 @@ pub async fn next_videos(
 ) -> Result<Vec<Video>, Box<dyn Error>> {
     let start_time = Instant::now();
     debug!("User: likes: {:?}, followed: {:?}, hashtags: {:?}", user.liked_videos, user.following, user.last_hashtags);
-    let hashtag = weighted_random(
+    let selected_hashtag = weighted_random(
         &sort_user_hashtags_by_frequency(user), // Sorts by frequency, so i = 0 is the most "liked" hashtag
         config.selecting.user_hashtag_decay_factor,
     );
 
     let fetched_videos = database::fetch_next_videos(
         config,
-        hashtag.clone().unwrap_or_else(|| "/".into()),
+        selected_hashtag.clone().unwrap_or_else(|| "/".into()),
         db_pool,
     )
     .await?;
 
-    let sorted_hashtag_vids = sort_hashtags(fetched_videos.1);
+    let hashtag_videos = fetched_videos.1;
     let sorted_rand_scored_vids = score_sort_random_videos(fetched_videos.0, user, config);
 
     let mut final_sort: Vec<Video> = Vec::new();
 
     let mut high_score_video_chosen = 0;
-    for i in 0..sorted_rand_scored_vids.len() + sorted_hashtag_vids.len() {
+    for i in 0..sorted_rand_scored_vids.len() + hashtag_videos.len() {
         if i >= config.selecting.next_videos_amount.try_into().unwrap() {
             break;
         }
 
-        if hashtag.is_some() && random_bool(config.selecting.hashtag_2_random_video_probability) {
+        if selected_hashtag.is_some() && random_bool(config.selecting.hashtag_2_random_video_probability) {
             // Hashtag Video
             let chosen = weighted_random(
-                &sorted_hashtag_vids,
+                &hashtag_videos,
                 config.selecting.select_high_freq_hashtag_probability,
             )
             .unwrap();
@@ -212,12 +185,12 @@ fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
 pub fn score_video_personalized(user: &User, video: &Video, config: &Config) -> f64 {
     let mut score = score_video(video, config);
     if user.following.contains(&video.user_id) {
-        score *= config.scoring.viewer_following_creator_ratio_exponent;
+        score *= config.scoring.viewer_following_creator_multiplier;
     }
 
     //Do not wanna show exact same videos
     if user.liked_videos.contains(&video.uuid) {
-        score *= config.scoring.viewer_liked_video_ratio_exponent;
+        score *= config.scoring.viewer_liked_video_multiplier;
     }
 
     score
