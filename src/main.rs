@@ -11,7 +11,7 @@ use axum::{
     serve, Extension, Router,
 };
 use colored::Colorize;
-use config::{Config, DATABASE_CONN_URL_KEY, HOST_IP_KEY, HOST_PORT_KEY};
+use config::{Config, DATABASE_CONN_URL_KEY, HOST_IP_KEY, HOST_PORT_KEY, LOG_LEVEL_KEY};
 use dotenv::dotenv;
 use env_logger::Builder;
 use log::{debug, info, LevelFilter};
@@ -33,15 +33,13 @@ async fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    Builder::new()
-        .filter_level(LevelFilter::Debug)
-        .format_target(false)
-        .init();
-    
-    info!("Starting..");
-    if let Ok(_) = dotenv() {
+   let dotenv_res = dotenv();
+   setup_logger();
+   info!("Starting..");
+    if let Ok(_) = dotenv_res {
         info!("Loaded .env file {}", "(development only)".yellow())
     }
+    
     debug!("JWT: {}", auth::gen_token("testing".to_string()).unwrap());
     let config = config::load();
     config::validate(&config).expect("Config validation failed");
@@ -92,6 +90,27 @@ fn app(config: Config, db_pool: Option<MySqlPool>) -> Router {
     }
 
     final_router
+}
+
+fn setup_logger() {
+    let log_level = env::var(LOG_LEVEL_KEY).expect("Failed to get log level out of enviroment");
+    let log_level = match log_level.as_str() {
+        "INFO" => LevelFilter::Info,
+        "DEBUG" => LevelFilter::Debug,
+        "ERROR" => LevelFilter::Error,
+        "WARN" => LevelFilter::Warn,
+        "TRACE" => LevelFilter::Trace,
+        "OFF" => LevelFilter::Off,
+        _ => {
+            println!("Unsupported log level: {}, switching to {}", log_level, "INFO".green());
+            LevelFilter::Info
+        },
+    };
+
+    Builder::new()
+        .filter_level(log_level)
+        .format_target(false)
+        .init();
 }
 
 async fn connect_db(config: &Config) -> MySqlPool {
