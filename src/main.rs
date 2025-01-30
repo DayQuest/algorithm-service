@@ -34,9 +34,10 @@ async fn main() {
     .expect("Error setting Ctrl-C handler");
 
     Builder::new()
-        .filter_level(LevelFilter::Info)
+        .filter_level(LevelFilter::Debug)
         .format_target(false)
         .init();
+    
     info!("Starting..");
     if let Ok(_) = dotenv() {
         info!("Loaded .env file {}", "(development only)".yellow())
