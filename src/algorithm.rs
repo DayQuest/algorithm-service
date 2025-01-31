@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, time::Instant};
+use std::{collections::{HashMap, HashSet}, error::Error, time::Instant};
 
 use crate::{
     config::Config,
@@ -11,6 +11,13 @@ use sqlx::MySqlPool;
 fn random_bool(probability_true: f64) -> bool {
     let mut rng = rand::thread_rng();
     rng.gen::<f64>() < (probability_true)
+}
+
+fn sort_out_repeated_videos(config: &Config, videos: &mut Vec<Video>, user: &User) {
+    let videos_set: HashSet<_> = videos.iter().map(|video| video.uuid.clone()).collect();
+
+    let common: HashSet<_> = user.last_viewed.iter().filter(|&x| videos_set.contains(x)).cloned().collect();
+    videos.retain(|video| !random_bool(config.selecting.already_watched_video_sort_out_probability) && !common.contains(&video.uuid));
 }
 
 fn weighted_random<T>(vec: &Vec<T>, decay_factor: f64) -> Option<T>
@@ -81,13 +88,16 @@ pub async fn next_videos(
         config.selecting.select_high_freq_hashtag_probability,
     );
 
-    let fetched_videos = database::fetch_next_videos(
+    let mut fetched_videos = database::fetch_next_videos(
         config,
         selected_hashtag.clone().unwrap_or_else(|| "/".into()),
         db_pool,
     )
     .await?;
-
+    
+    sort_out_repeated_videos(config, &mut fetched_videos.0, user);
+    sort_out_repeated_videos(config, &mut fetched_videos.1, user);
+    
     // Hashtag videos orderd by high and low score
     let sorted_hashtag_videos = score_sort_videos(fetched_videos.1, user, config);
 
@@ -102,7 +112,7 @@ pub async fn next_videos(
         if i >= config.selecting.next_videos_amount.try_into().unwrap() {
             break;
         }
-
+        
         if selected_hashtag.is_some()
             && random_bool(config.selecting.hashtag_2_random_video_probability)
         {
