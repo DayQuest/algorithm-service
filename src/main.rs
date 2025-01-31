@@ -11,10 +11,10 @@ use axum::{
     serve, Extension, Router,
 };
 use colored::Colorize;
-use config::{Config, DATABASE_CONN_URL_KEY, HOST_IP_KEY, HOST_PORT_KEY, LOG_LEVEL_KEY};
+use config::{Config, DATABASE_CONN_URL_KEY, HOST_IP_KEY, HOST_PORT_KEY};
 use dotenv::dotenv;
-use env_logger::Builder;
-use log::{debug, info, LevelFilter};
+use env_logger::{Builder, Env};
+use log::{debug, info};
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use tokio::net::TcpListener;
 
@@ -34,7 +34,9 @@ async fn main() {
     .expect("Error setting Ctrl-C handler");
 
    let dotenv_res = dotenv();
-   setup_logger();
+   Builder::from_env(Env::default())
+       .format_target(false)
+       .init();
    info!("Starting..");
     if let Ok(_) = dotenv_res {
         info!("Loaded .env file {}", "(development only)".yellow())
@@ -90,24 +92,6 @@ fn app(config: Config, db_pool: Option<MySqlPool>) -> Router {
     }
 
     final_router
-}
-
-fn setup_logger() {
-    let log_level = env::var(LOG_LEVEL_KEY).expect("Failed to get log level out of enviroment");
-    let log_level = match log_level.as_str() {
-        "INFO" => LevelFilter::Info,
-        "DEBUG" => LevelFilter::Debug,
-        "ERROR" => LevelFilter::Error,
-        "WARN" => LevelFilter::Warn,
-        "TRACE" => LevelFilter::Trace,
-        "OFF" => LevelFilter::Off,
-        _ => { panic!("Unknown log level: {log_level}") },
-    };
-
-    Builder::new()
-        .filter_level(log_level)
-        .format_target(false)
-        .init();
 }
 
 async fn connect_db(config: &Config) -> MySqlPool {
