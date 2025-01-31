@@ -8,7 +8,7 @@ use crate::config::{
     Config, DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE,
     FOLLOWED_USERS_COLUMN, TIMESTAMP_COLUMN, USER_ID_COLUMN, UUID_COLUMN, VIDEO_COMMENTS_COLUMN,
     VIDEO_DOWN_VOTES_COLUMN, VIDEO_HASHTAGS_COLUMN, VIDEO_ID_COLUMN, VIDEO_READY_STATUS,
-    VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN, VIEWED_VIDEOS_TABLE, VIEWED_AT_COLUMN
+    VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN, DB_VIEWED_VIDEOS_TABLE, VIEWED_AT_COLUMN
 };
 
 pub trait DatabaseModel<T> {
@@ -26,7 +26,7 @@ pub struct User {
 async fn fetch_last_viewed_videos(uuid: &str, db_pool: &MySqlPool, amount: u32) -> Result<Vec<String>, Error> {
     Ok(query(&format!(
         "SELECT {VIDEO_ID_COLUMN}
-         FROM {DB_LIKED_VIDEOS_TABLE}
+         FROM {DB_VIEWED_VIDEOS_TABLE}
          WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
          ORDER BY {VIEWED_AT_COLUMN} DESC
          LIMIT ?"
@@ -43,7 +43,7 @@ async fn fetch_last_viewed_videos(uuid: &str, db_pool: &MySqlPool, amount: u32) 
 async fn fetch_liked_videos(uuid: &str, db_pool: &MySqlPool) -> Result<Vec<String>, Error> {
     Ok(query(&format!(
         "SELECT {VIDEO_ID_COLUMN}
-         FROM {VIEWED_VIDEOS_TABLE}
+         FROM {DB_LIKED_VIDEOS_TABLE}
          WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)"
     ))
     .bind(uuid)

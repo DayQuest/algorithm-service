@@ -21,7 +21,7 @@ pub const LOG_LEVEL_KEY: &str = "LOG_LEVEL";
 // Tables
 pub const DB_VIDEO_TABLE: &str = "video";
 pub const DB_LIKED_VIDEOS_TABLE: &str = "liked_videos";
-pub const VIEWED_VIDEOS_TABLE: &str = "viewed_video";
+pub const DB_VIEWED_VIDEOS_TABLE: &str = "viewed_video";
 // pub const DB_COMMENT_TABLE: &str = "comments";
 pub const DB_USER_FOLLOWED_USER_TABLE: &str = "user_followed_users";
 pub const VIDEO_READY_STATUS: &str = "3";
@@ -66,7 +66,7 @@ pub fn overwrite(content: String) -> Result<(), Error> {
 
 // Just most important things
 pub fn validate(c: &Config) -> Result<(), &str> {
-    if c.selecting.next_videos_amount
+    if c.selecting.max_next_videos_amount
         > c.selecting.next_videos_fetch_amount_matching_hashtag
             + c.selecting.next_videos_fetch_amount_random
     {
@@ -191,9 +191,9 @@ pub struct SelectingConfig {
     /// video (which also matches his hashtag, thats why this value should be low)
     pub high_score_after_hashtag_video_probability: f64,
 
-    /// The amount of videos the next videos endpoint will
+    /// The max. amount of videos the next videos endpoint will
     /// return. This value needs to be lower than the values underneath.
-    pub next_videos_amount: u32,
+    pub max_next_videos_amount: u32,
 
     /// This value decides how many matching hashtag videos will be fetched
     /// for the next videos algorithm

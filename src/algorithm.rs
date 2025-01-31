@@ -107,9 +107,10 @@ pub async fn next_videos(
     let mut final_sort: Vec<Video> = Vec::new();
 
     let mut high_score_rand_video_chosen = 0;
+
     let mut high_score_hashtag_video_chosen = 0;
     for i in 0..sorted_rand_scored_vids.len() + sorted_hashtag_videos.len() {
-        if i >= config.selecting.next_videos_amount.try_into().unwrap() {
+        if i >= config.selecting.max_next_videos_amount.try_into().unwrap() {
             break;
         }
         
