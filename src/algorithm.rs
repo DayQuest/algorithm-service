@@ -1,4 +1,8 @@
-use std::{collections::{HashMap, HashSet}, error::Error, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    error::Error,
+    time::Instant,
+};
 
 use crate::{
     config::Config,
@@ -16,8 +20,16 @@ fn random_bool(probability_true: f64) -> bool {
 fn sort_out_repeated_videos(config: &Config, videos: &mut Vec<Video>, user: &User) {
     let videos_set: HashSet<_> = videos.iter().map(|video| video.uuid.clone()).collect();
 
-    let common: HashSet<_> = user.last_viewed.iter().filter(|&x| videos_set.contains(x)).cloned().collect();
-    videos.retain(|video| !random_bool(config.selecting.already_watched_video_sort_out_probability) && !common.contains(&video.uuid));
+    let common: HashSet<_> = user
+        .last_viewed
+        .iter()
+        .filter(|&x| videos_set.contains(x))
+        .cloned()
+        .collect();
+    videos.retain(|video| {
+        !random_bool(config.selecting.already_watched_video_sort_out_probability)
+            && !common.contains(&video.uuid)
+    });
 }
 
 fn weighted_random<T>(vec: &Vec<T>, decay_factor: f64) -> Option<T>
@@ -73,6 +85,29 @@ fn sort_user_hashtags_by_frequency(user: &User) -> Vec<String> {
         .collect()
 }
 
+fn select_high_or_low_score_video(
+    final_sort: &mut Vec<Video>,
+    source: &Vec<Video>,
+    counter: &mut usize,
+    probability: f64,
+    i: usize,
+) {
+    if random_bool(probability) {
+        // Matching hashtag & high score
+        let video = source.get(source.len() - *counter - 1).unwrap();
+        final_sort.push(video.clone());
+        *counter += 1;
+
+        debug!("    highscore");
+        debug!("");
+    } else {
+        // Matching hashtag & low score
+        final_sort.push(source.get(i).unwrap().clone());
+        debug!("    lowscore");
+        debug!("");
+    }
+}
+
 pub async fn next_videos(
     user: &User,
     config: &Config,
@@ -94,10 +129,10 @@ pub async fn next_videos(
         db_pool,
     )
     .await?;
-    
+
     sort_out_repeated_videos(config, &mut fetched_videos.0, user);
     sort_out_repeated_videos(config, &mut fetched_videos.1, user);
-    
+
     // Hashtag videos orderd by high and low score
     let sorted_hashtag_videos = score_sort_videos(fetched_videos.1, user, config);
 
@@ -108,40 +143,33 @@ pub async fn next_videos(
 
     let mut high_score_rand_video_chosen = 0;
 
+    debug!("Selected Hashtag: {:?}", selected_hashtag);
     let mut high_score_hashtag_video_chosen = 0;
     for i in 0..sorted_rand_scored_vids.len() + sorted_hashtag_videos.len() {
         if i >= config.selecting.max_next_videos_amount.try_into().unwrap() {
             break;
         }
-        
+
         if selected_hashtag.is_some()
             && random_bool(config.selecting.hashtag_2_random_video_probability)
         {
-            // Choose between high or low scored hashtag video
-            if random_bool(config.selecting.high_score_after_hashtag_video_probability) {
-                // Matching hashtag & high score
-                let video = sorted_hashtag_videos
-                    .get(sorted_hashtag_videos.len() - high_score_hashtag_video_chosen - 1)
-                    .unwrap();
-                final_sort.push(video.clone());
-                high_score_hashtag_video_chosen += 1;
-            } else {
-                // Matching hashtag & low score
-                final_sort.push(sorted_hashtag_videos.get(i).unwrap().clone());
-            }
+            debug!("+ hashtag");
+            select_high_or_low_score_video(
+                &mut final_sort,
+                &sorted_hashtag_videos,
+                &mut high_score_hashtag_video_chosen,
+                config.selecting.high_score_after_hashtag_video_probability,
+                i,
+            );
         } else {
-            // Random video
-            if random_bool(config.selecting.high_score_video_probability) {
-                // Put a high scored video in
-                let video = sorted_rand_scored_vids
-                    .get(sorted_rand_scored_vids.len() - high_score_rand_video_chosen - 1)
-                    .unwrap();
-                final_sort.push(video.clone());
-                high_score_rand_video_chosen += 1;
-            } else {
-                // Random low score
-                final_sort.push(sorted_rand_scored_vids.get(i).unwrap().clone());
-            }
+            debug!("+ random");
+            select_high_or_low_score_video(
+                &mut final_sort,
+                &sorted_rand_scored_vids,
+                &mut high_score_rand_video_chosen,
+                config.selecting.high_score_video_probability,
+                i,
+            );
         }
     }
 
