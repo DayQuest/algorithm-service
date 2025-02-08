@@ -47,6 +47,7 @@ pub struct PersonalizeScoreResponse {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PersonalizeVideoRequest {
     user_id: String,
     video_id: String,
@@ -81,6 +82,7 @@ pub async fn score_video_personalized(
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NextVideosRequest {
     user_id: String,
 }
