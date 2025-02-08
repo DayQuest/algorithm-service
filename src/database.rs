@@ -6,9 +6,10 @@ use uuid::Uuid;
 
 use crate::config::{
     Config, DB_LIKED_VIDEOS_TABLE, DB_USER_FOLLOWED_USER_TABLE, DB_VIDEO_TABLE,
-    FOLLOWED_USERS_COLUMN, TIMESTAMP_COLUMN, USER_ID_COLUMN, UUID_COLUMN, VIDEO_COMMENTS_COLUMN,
-    VIDEO_DOWN_VOTES_COLUMN, VIDEO_HASHTAGS_COLUMN, VIDEO_ID_COLUMN, VIDEO_READY_STATUS,
-    VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN, VIDEO_VIEWTIME_COLUMN, DB_VIEWED_VIDEOS_TABLE, VIEWED_AT_COLUMN
+    DB_VIEWED_VIDEOS_TABLE, FOLLOWED_USERS_COLUMN, TIMESTAMP_COLUMN, USER_ID_COLUMN, UUID_COLUMN,
+    VIDEO_COMMENTS_COLUMN, VIDEO_DOWN_VOTES_COLUMN, VIDEO_HASHTAGS_COLUMN, VIDEO_ID_COLUMN,
+    VIDEO_READY_STATUS, VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN,
+    VIDEO_VIEWTIME_COLUMN, VIEWED_AT_COLUMN,
 };
 
 pub trait DatabaseModel<T> {
@@ -20,10 +21,14 @@ pub struct User {
     pub liked_videos: Vec<String>,
     pub following: Vec<String>,
     pub last_hashtags: Vec<String>, //Last liked hashtag, filtered by timestamp
-    pub last_viewed: Vec<String>
+    pub last_viewed: Vec<String>,
 }
 
-async fn fetch_last_viewed_videos(uuid: &str, db_pool: &MySqlPool, amount: u32) -> Result<Vec<String>, Error> {
+async fn fetch_last_viewed_videos(
+    uuid: &str,
+    db_pool: &MySqlPool,
+    amount: u32,
+) -> Result<Vec<String>, Error> {
     Ok(query(&format!(
         "SELECT {VIDEO_ID_COLUMN}
          FROM {DB_VIEWED_VIDEOS_TABLE}
@@ -109,7 +114,11 @@ impl DatabaseModel<User> for User {
             fetch_liked_videos(uuid, db_pool),
             fetch_following(uuid, db_pool),
             fetch_hashtags(uuid, db_pool, config.selecting.user_hashtag_fetch_amount),
-            fetch_last_viewed_videos(uuid, db_pool, config.selecting.already_viewed_videos_fetch_amount)
+            fetch_last_viewed_videos(
+                uuid,
+                db_pool,
+                config.selecting.already_viewed_videos_fetch_amount
+            )
         )?;
 
         debug!(
@@ -233,7 +242,7 @@ fn process_video_rows(rows: Vec<sqlx::mysql::MySqlRow>) -> Result<Vec<Video>, Er
         let video = process_video_row(ele)?;
         videos.push(video);
     }
-    
+
     Ok(videos)
 }
 
