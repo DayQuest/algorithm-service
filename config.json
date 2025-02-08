@@ -1,28 +1,28 @@
 {
-  "config_name": "beta-v1",
-  "max_dbpool_connections": 10,
+  "configName": "beta-v1",
+  "maxDbpoolConnections": 10,
   "scoring": {
-    "comments_2_votes_strength": 0.9,
-    "like_2_view_strength": 1.2,
-    "normalize_threshold": 0.65,
-    "upvote_2_totalvotes_strength": 1.8,
-    "upvote_exponent": 4.0,
-    "view_exponent": 3.5,
-    "viewer_following_creator_multiplier": 1.03,
-    "viewer_liked_video_multiplier": 0.96,
-    "viewtime_per_view_strength": 1.2,
-    "viral_score": 1000.0
+    "comments2VotesStrength": 0.9,
+    "like2ViewStrength": 1.2,
+    "normalizeThreshold": 0.65,
+    "upvote2TotalvotesStrength": 1.8,
+    "upvoteExponent": 4.0,
+    "viewExponent": 3.5,
+    "viewerFollowingCreatorMultiplier": 1.03,
+    "viewerLikedVideoMultiplier": 0.96,
+    "viewtimePerViewStrength": 1.2,
+    "viralScore": 1000.0
   },
   "selecting": {
-    "already_viewed_videos_fetch_amount": 12,
-    "already_watched_video_sort_out_probability": 0.45,
-    "hashtag_2_random_video_probability": 0.8,
-    "high_score_after_hashtag_video_probability": 0.2,
-    "high_score_video_probability": 0.25,
-    "max_next_videos_amount": 15,
-    "next_videos_fetch_amount_matching_hashtag": 10,
-    "next_videos_fetch_amount_random": 15,
-    "select_high_freq_hashtag_probability": 0.65,
-    "user_hashtag_fetch_amount": 100
+    "alreadyViewedVideosFetchAmount": 12,
+    "alreadyWatchedVideoSortOutProbability": 0.45,
+    "hashtag2RandomVideoProbability": 0.8,
+    "highScoreAfterHashtagVideoProbability": 0.2,
+    "highScoreVideoProbability": 0.25,
+    "maxNextVideosAmount": 15,
+    "nextVideosFetchAmountMatchingHashtag": 10,
+    "nextVideosFetchAmountRandom": 15,
+    "selectHighFreqHashtagProbability": 0.65,
+    "userHashtagFetchAmount": 100
   }
 }

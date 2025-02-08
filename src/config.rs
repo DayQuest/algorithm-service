@@ -100,6 +100,7 @@ pub fn validate(c: &Config) -> Result<(), &str> {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ScoringConfig {
     /// The score increases by being multiplied with the upvotes to the power of x.
     /// This value controlls x. Which means: the higher this value is the more it is
@@ -155,6 +156,7 @@ pub struct ScoringConfig {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct SelectingConfig {
     /// The algorithm fetches the hashtags of the videos the user
     /// liked and sorts them so the most frequent hashtags are
@@ -215,6 +217,7 @@ pub struct SelectingConfig {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Config {
     pub config_name: String,
     pub max_dbpool_connections: u32,
