@@ -9,17 +9,11 @@ use crate::{
     database::{self, User, Video},
 };
 use log::debug;
-use rand::{distributions::WeightedIndex, prelude::Distribution, thread_rng, Rng};
+use rand::{distr::{weighted::WeightedIndex, Distribution}, random_bool};
 use sqlx::MySqlPool;
-
-fn random_bool(probability_true: f64) -> bool {
-    let mut rng = rand::thread_rng();
-    rng.gen::<f64>() < (probability_true)
-}
 
 fn sort_out_repeated_videos(config: &Config, videos: &mut Vec<Video>, user: &User) {
     let videos_set: HashSet<_> = videos.iter().map(|video| video.uuid.clone()).collect();
-
     let common: HashSet<_> = user
         .last_viewed
         .iter()
@@ -49,9 +43,7 @@ where
         .collect();
 
     let dist = WeightedIndex::new(&weights).unwrap();
-    let mut rng = thread_rng();
-    let index = dist.sample(&mut rng);
-
+    let index = dist.sample(&mut rand::rng());
     Some(vec[index].clone())
 }
 
