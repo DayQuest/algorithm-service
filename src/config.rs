@@ -15,7 +15,7 @@ pub const JWT_SECRET_KEY: &str = "JWT_SECRET";
 pub const INTERNAL_SECRET_KEY: &str = "INTERNAL_SECRET";
 pub const DATABASE_CONN_URL_KEY: &str = "DATABASE_CONNECTION_URL";
 pub const HOST_IP_KEY: &str = "HOST_IP";
-pub const HOST_PORT_KEY: &str = "HOST_PORT";
+pub const HOST_PORT_KEY: &str = "SERVER_PORT";
 
 // Tables
 pub const DB_VIDEO_TABLE: &str = "video";
