@@ -1,0 +1,15 @@
+FROM rust:latest AS builder
+
+WORKDIR /app
+
+RUN cargo install cargo-watch
+
+COPY Cargo.toml Cargo.lock ./
+
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs
+
+RUN cargo build --release && rm -rf target/release/deps/dayquest_algorithm*
+
+COPY . .
+
+CMD ["cargo", "watch", "-x", "run"]
