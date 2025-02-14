@@ -24,6 +24,7 @@ pub const DB_VIEWED_VIDEOS_TABLE: &str = "viewed_video";
 // pub const DB_COMMENT_TABLE: &str = "comments";
 pub const DB_USER_FOLLOWED_USER_TABLE: &str = "user_followed_users";
 pub const VIDEO_READY_STATUS: &str = "3";
+pub const DB_USER_LIKED_HASHTAGS_TABLE: &str = "user_liked_hastags";
 
 // Columns
 pub const VIEWED_AT_COLUMN: &str = "viewed_at";
