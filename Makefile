@@ -9,7 +9,7 @@ dev:
 	@echo "|____/ \__\_\ /_/   \_\_____\____|\___/|_| \_\___| |_| |_| |_|_|  |_|"
 	@echo "                                                       by Tiiita     "
 	@echo "Starting Docker Compose in development mode..."
-	docker-compose -f $(DEV_COMPOSE_FILE) up --build
+	docker-compose -f $(DEV_COMPOSE_FILE) up
 
 prod:
 	@echo " ____   ___       _    _     ____  ___  ____  ___ _____ _   _ __  __ "
