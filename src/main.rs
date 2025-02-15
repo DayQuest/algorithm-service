@@ -42,7 +42,7 @@ async fn main() {
     Builder::from_env(Env::default())
         .format_target(false)
         .init();
-    info!("Starting..");
+    info!("Starting ({})..", if cfg!(debug_assertions) { "Debug Mode" } else { "Release Mode" });
     
     if dotenv_res.is_ok() {
         info!("Loaded .env file {}", "(development only)".yellow());
