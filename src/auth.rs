@@ -62,6 +62,47 @@ pub struct Claims {
     pub exp: usize,
 }
 
+fn extract_auth_header<'a>(request: &'a Request<Body>) -> Option<&'a str> {
+    request
+        .headers()
+        .get(AUTHORIZATION)
+        .and_then(|header| header.to_str().ok())
+        .and_then(|header| header.strip_prefix("Bearer "))
+}
+
+enum AuthError {
+    InvalidHeader,
+    ClaimExtractionError(Error),
+    WrongInternalSecret(String),
+}
+
+fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
+    let err_msg = match error {
+        AuthError::InvalidHeader => "Invalid auth header".to_string(),
+        AuthError::ClaimExtractionError(why) => format!("Failed claim extraction: {}", why),
+        AuthError::WrongInternalSecret(used_pw) => format!("Wrong internal secret: `{}`", used_pw),
+    };
+
+    match request.extensions().get::<SocketAddr>() {
+        Some(socket_addr) => {
+            warn!(
+                "`{}` failed authentication, err: {}",
+                socket_addr.ip(),
+                err_msg
+            );
+        }
+
+        None => {
+            warn!(
+                "(Unknown Socket Addr) failed authentication, err: {}",
+                err_msg
+            )
+        }
+    }
+}
+
+
+// Middlewares
 pub async fn jwt_middleware(
     mut request: Request<Body>,
     next: Next,
@@ -101,41 +142,3 @@ pub async fn internal_secret_middleware(
     Ok(next.run(request).await)
 }
 
-fn extract_auth_header<'a>(request: &'a Request<Body>) -> Option<&'a str> {
-    request
-        .headers()
-        .get(AUTHORIZATION)
-        .and_then(|header| header.to_str().ok())
-        .and_then(|header| header.strip_prefix("Bearer "))
-}
-
-enum AuthError {
-    InvalidHeader,
-    ClaimExtractionError(Error),
-    WrongInternalSecret(String),
-}
-
-fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
-    let err_msg = match error {
-        AuthError::InvalidHeader => "Invalid auth header".to_string(),
-        AuthError::ClaimExtractionError(why) => format!("Failed claim extraction: {}", why),
-        AuthError::WrongInternalSecret(used_pw) => format!("Wrong internal secret: `{}`", used_pw),
-    };
-
-    match request.extensions().get::<SocketAddr>() {
-        Some(socket_addr) => {
-            warn!(
-                "`{}` failed authentication, err: {}",
-                socket_addr.ip(),
-                err_msg
-            );
-        }
-
-        None => {
-            warn!(
-                "(Unknown Socket Addr) failed authentication, err: {}",
-                err_msg
-            )
-        }
-    }
-}
