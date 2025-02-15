@@ -1,5 +1,5 @@
 use std::{
-    env, net::SocketAddr, process::exit, sync::{Arc, Mutex}, time::Instant
+    env, process::exit, sync::{Arc, Mutex}, time::Instant
 };
 
 use axum::{
@@ -99,7 +99,7 @@ async fn main() {
         Instant::elapsed(&start_time).as_millis()
     );
 
-    serve(listener, app(config, db_pool).into_make_service_with_connect_info::<SocketAddr>())
+    serve(listener, app(config, db_pool))
         .await
         .unwrap_or_else(|e| {
             error!("Failed to start server: {}", e);

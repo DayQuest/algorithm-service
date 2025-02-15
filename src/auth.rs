@@ -1,5 +1,4 @@
 use axum::body::Body;
-use axum::extract::ConnectInfo;
 use axum::http::header::AUTHORIZATION;
 use axum::http::Request;
 use axum::http::Response;
@@ -19,7 +18,6 @@ use log::warn;
 use serde::Deserialize;
 use serde::Serialize;
 use std::env;
-use std::net::SocketAddr;
 
 use crate::config::INTERNAL_SECRET_KEY;
 use crate::config::JWT_SECRET_KEY;
@@ -78,7 +76,7 @@ enum AuthError {
     WrongInternalSecret(String),
 }
 
-fn warn_failed_auth(request: &Request<Body>, addr: SocketAddr, error: AuthError) {
+fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
     let err_msg = match error {
         AuthError::InvalidHeader => "Invalid auth header".to_string(),
         AuthError::ClaimExtractionError(why) => format!("Failed claim extraction: {}", why),
@@ -99,10 +97,9 @@ fn warn_failed_auth(request: &Request<Body>, addr: SocketAddr, error: AuthError)
         .unwrap_or("?");
 
     warn!(
-        "User-Agent: {}, IP (Header): {}, SocketAddr: {} => failed authentication: {}",
+        "User-Agent: {}, IP (Header): {} => failed authentication: {}",
         user_agent, 
         ip_address_header,
-        addr.ip(),
         err_msg
     );
 }
@@ -110,19 +107,18 @@ fn warn_failed_auth(request: &Request<Body>, addr: SocketAddr, error: AuthError)
 
 // Middlewares
 pub async fn jwt_middleware(
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response<Body>, StatusCode> {
     let auth_header = extract_auth_header(&request).ok_or_else(|| {
-        warn_failed_auth(&request, addr, AuthError::InvalidHeader);
+        warn_failed_auth(&request, AuthError::InvalidHeader);
         StatusCode::UNAUTHORIZED
     })?;
 
     let claims = match extract_claims(auth_header) {
         Ok(claims) => claims,
         Err(why) => {
-            warn_failed_auth(&request, addr, AuthError::ClaimExtractionError(why));
+            warn_failed_auth(&request, AuthError::ClaimExtractionError(why));
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -133,17 +129,16 @@ pub async fn jwt_middleware(
 }
 
 pub async fn internal_secret_middleware(
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     request: Request<Body>,
     next: Next,
 ) -> Result<Response<Body>, StatusCode> {
     let auth_header = extract_auth_header(&request).ok_or_else(|| {
-        warn_failed_auth(&request, addr, AuthError::InvalidHeader);
+        warn_failed_auth(&request, AuthError::InvalidHeader);
         StatusCode::UNAUTHORIZED
     })?;
 
     if !auth_header.eq(&env::var(INTERNAL_SECRET_KEY).unwrap()) {
-        warn_failed_auth(&request, addr, AuthError::WrongInternalSecret(auth_header.to_owned()));
+        warn_failed_auth(&request, AuthError::WrongInternalSecret(auth_header.to_owned()));
         return Err(StatusCode::UNAUTHORIZED);
     }
 
