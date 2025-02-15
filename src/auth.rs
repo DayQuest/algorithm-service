@@ -20,14 +20,14 @@ use std::env;
 use crate::config::INTERNAL_SECRET_KEY;
 use crate::config::JWT_SECRET_KEY;
 
-pub fn gen_token(user_id: String) -> Result<String, Error> {
+pub fn gen_token(username: String) -> Result<String, Error> {
     let encoding_key = EncodingKey::from_secret(
         env::var(JWT_SECRET_KEY)
             .expect("Failed to get jwt secret")
             .as_ref(),
     );
     let claims = Claims {
-        user_id,
+        username,
         iat: Utc::now().timestamp() as usize,
         exp: (Utc::now().timestamp() + Duration::days(365 * 200).num_seconds()) as usize,
     };
@@ -52,7 +52,7 @@ pub fn extract_claims(token: &str) -> Result<Claims, Error> {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Claims {
-    pub user_id: String, //uuid v4
+    pub username: String,
     pub iat: usize,
     pub exp: usize,
 }
