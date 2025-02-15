@@ -13,9 +13,11 @@ use jsonwebtoken::DecodingKey;
 use jsonwebtoken::EncodingKey;
 use jsonwebtoken::Header;
 use jsonwebtoken::Validation;
+use log::warn;
 use serde::Deserialize;
 use serde::Serialize;
 use std::env;
+use std::net::SocketAddr;
 
 use crate::config::INTERNAL_SECRET_KEY;
 use crate::config::JWT_SECRET_KEY;
@@ -65,7 +67,16 @@ pub async fn jwt_middleware(
 
     let claims = match extract_claims(auth_header) {
         Ok(claims) => claims,
-        Err(_) => return Err(StatusCode::UNAUTHORIZED),
+        Err(why) => {
+            match request.extensions().get::<SocketAddr>() {
+                Some(socket_addr) => {
+                    warn!("`{}` failed authentication, err: {}", socket_addr.ip(), why);
+                },
+
+                None => { warn!("(Unknown Socket Addr) failed authentication, err: {}", why) },
+            }
+            return Err(StatusCode::UNAUTHORIZED)
+        },
     };
 
     request.extensions_mut().insert(claims);
