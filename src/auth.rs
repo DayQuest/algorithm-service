@@ -24,11 +24,12 @@ use crate::config::INTERNAL_SECRET_KEY;
 use crate::config::JWT_SECRET_KEY;
 
 pub fn gen_token(username: String) -> Result<String, Error> {
-    let encoding_key = EncodingKey::from_secret(
+    let encoding_key = EncodingKey::from_base64_secret(
         env::var(JWT_SECRET_KEY)
             .expect("Failed to get jwt secret")
             .as_ref(),
-    );
+    )?;
+
     let claims = Claims {
         sub: username,
         iat: Utc::now().timestamp() as usize,
@@ -42,11 +43,11 @@ pub fn gen_token(username: String) -> Result<String, Error> {
 pub fn extract_claims(token: &str) -> Result<Claims, Error> {
     let claims = decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(
+        &DecodingKey::from_base64_secret(
             env::var(JWT_SECRET_KEY)
                 .expect("Failed to get jwt secret")
                 .as_ref(),
-        ),
+        )?,
         &Validation::new(Algorithm::HS256),
     )?
     .claims;
