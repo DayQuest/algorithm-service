@@ -142,7 +142,6 @@ pub async fn internal_secret_middleware(
         StatusCode::UNAUTHORIZED
     })?;
 
-
     if !auth_header.eq(&env::var(INTERNAL_SECRET_KEY).unwrap()) {
         warn_failed_auth(&request, addr, AuthError::WrongInternalSecret(auth_header.to_owned()));
         return Err(StatusCode::UNAUTHORIZED);
