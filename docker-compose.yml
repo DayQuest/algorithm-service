@@ -7,7 +7,7 @@ services:
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
     env_file:
-      - .env
+      - stack.env
     restart: unless-stopped
     pull_policy: build
 
