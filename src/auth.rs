@@ -66,7 +66,7 @@ pub async fn jwt_middleware(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response<Body>, StatusCode> {
-    let auth_header = extract_auth_header(&request).ok_or({
+    let auth_header = extract_auth_header(&request).ok_or_else(|| {
         warn_failed_auth(&request, AuthError::InvalidHeader);
         StatusCode::UNAUTHORIZED
     })?;
@@ -88,7 +88,7 @@ pub async fn internal_secret_middleware(
     request: Request<Body>,
     next: Next,
 ) -> Result<Response<Body>, StatusCode> {
-    let auth_header = extract_auth_header(&request).ok_or({
+    let auth_header = extract_auth_header(&request).ok_or_else(|| {
         warn_failed_auth(&request, AuthError::InvalidHeader);
         StatusCode::UNAUTHORIZED
     })?;
