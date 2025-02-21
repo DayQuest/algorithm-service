@@ -83,13 +83,13 @@ fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
         AuthError::WrongInternalSecret(used_pw) => format!("Wrong internal secret: `{}`", used_pw),
     };
 
-    let ip_addr_header = request
+    let forward_for_h = request
         .headers()
         .get("X-Forwarded-For")
         .and_then(|value| value.to_str().ok())
         .unwrap_or("?");
 
-    let real_ip_addr_header = request
+    let real_ip_h = request
         .headers()
         .get("X-Real-IP")
         .and_then(|value| value.to_str().ok())
@@ -103,7 +103,7 @@ fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
 
     warn!(
         "X-FF: {}, X-RIP: {}, User-Agent: {} => failed auth: {}",
-        user_agent, ip_addr_header, real_ip_addr_header, err_msg
+        forward_for_h, real_ip_h, user_agent, err_msg
     );
 }
 
