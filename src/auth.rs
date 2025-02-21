@@ -83,10 +83,15 @@ fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
         AuthError::WrongInternalSecret(used_pw) => format!("Wrong internal secret: `{}`", used_pw),
     };
 
-
-    let ip_address_header = request
+    let ip_addr_header = request
         .headers()
         .get("X-Forwarded-For")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("?");
+
+    let real_ip_addr_header = request
+        .headers()
+        .get("X-Real-IP")
         .and_then(|value| value.to_str().ok())
         .unwrap_or("?");
 
@@ -97,13 +102,10 @@ fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
         .unwrap_or("?");
 
     warn!(
-        "User-Agent: {}, IP (Header): {} => failed authentication: {}",
-        user_agent, 
-        ip_address_header,
-        err_msg
+        "X-FF: {}, X-RIP: {}, User-Agent: {} => failed auth: {}",
+        user_agent, ip_addr_header, real_ip_addr_header, err_msg
     );
 }
-
 
 // Middlewares
 pub async fn jwt_middleware(
@@ -138,10 +140,12 @@ pub async fn internal_secret_middleware(
     })?;
 
     if !auth_header.eq(&env::var(INTERNAL_SECRET_KEY).unwrap()) {
-        warn_failed_auth(&request, AuthError::WrongInternalSecret(auth_header.to_owned()));
+        warn_failed_auth(
+            &request,
+            AuthError::WrongInternalSecret(auth_header.to_owned()),
+        );
         return Err(StatusCode::UNAUTHORIZED);
     }
 
     Ok(next.run(request).await)
 }
-
