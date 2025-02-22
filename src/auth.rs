@@ -102,10 +102,9 @@ fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
         .and_then(|value| value.to_str().ok())
         .unwrap_or("?");
 
-    let uri = request.uri().to_string();
     warn!(
-        "X-FF: {}, X-RIP: {}, URI: {}, User-Agent: {} => failed auth: {}",
-        forward_for_h.yellow(), real_ip_h.yellow(), uri, user_agent, err_msg.red()
+        "X-FF: {}, X-RIP: {}, User-Agent: {} => failed auth: {}",
+        forward_for_h.yellow(), real_ip_h.yellow(), user_agent, err_msg.red()
     );
 }
 
