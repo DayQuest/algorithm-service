@@ -10,7 +10,8 @@ services:
       - .env
     restart: unless-stopped
     pull_policy: build
-
+    tty: true      
+    stdin_open: true
 networks:
   dayquest-network:
     external: true
