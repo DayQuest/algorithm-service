@@ -23,7 +23,6 @@ mod endpoint;
 async fn main() {
     let start_time = Instant::now();
 
-    // Handle Ctrl-C gracefully
     ctrlc::set_handler(move || {
         info!("{}", "Stopping server, Bye :)".on_red());
         exit(0);
@@ -32,8 +31,7 @@ async fn main() {
         error!("Error setting Ctrl-C handler: {}", e);
         exit(0);
     });
-
-    // Initialize logger
+    
     let dotenv_res = dotenv();
     Builder::from_env(Env::default())
         .format_target(false)
@@ -59,14 +57,12 @@ async fn main() {
         })
     );
 
-    // Load and validate configuration
     let config = config::load();
     if let Err(e) = config::validate(&config) {
         error!("Config validation failed: {}", e);
         exit(0);
     }
 
-    // Get host and port from environment variables
     let ip = env::var(HOST_IP_KEY).unwrap_or_else(|_| {
         error!("Did not find host IP in env");
         exit(0);
@@ -79,13 +75,11 @@ async fn main() {
 
     let addr = format!("{}:{}", ip, port);
 
-    // Bind to address
     let listener = TcpListener::bind(&addr).await.unwrap_or_else(|e| {
         error!("Failed to bind to {}: {}", addr, e);
         exit(0);
     });
 
-    // Connect to database
     let db_pool = match connect_db(&config).await {
         Ok(pool) => pool,
         Err(why) => {
