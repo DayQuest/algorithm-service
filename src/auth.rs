@@ -6,6 +6,7 @@ use axum::http::StatusCode;
 use axum::middleware::Next;
 use chrono::Duration;
 use chrono::Utc;
+use colored::Colorize;
 use jsonwebtoken::decode;
 use jsonwebtoken::encode;
 use jsonwebtoken::errors::Error;
@@ -101,9 +102,10 @@ fn warn_failed_auth(request: &Request<Body>, error: AuthError) {
         .and_then(|value| value.to_str().ok())
         .unwrap_or("?");
 
+    let uri = request.uri().to_string();
     warn!(
-        "X-FF: {}, X-RIP: {}, User-Agent: {} => failed auth: {}",
-        forward_for_h, real_ip_h, user_agent, err_msg
+        "X-FF: {}, X-RIP: {}, URI: {}, User-Agent: {} => failed auth: {}",
+        forward_for_h.yellow(), real_ip_h.yellow(), uri, user_agent, err_msg.red()
     );
 }
 
