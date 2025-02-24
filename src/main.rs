@@ -22,7 +22,6 @@ mod endpoint;
 #[tokio::main]
 async fn main() {
     let start_time = Instant::now();
-
     ctrlc::set_handler(move || {
         info!("{}", "Stopping server, Bye :)".on_red());
         exit(0);
@@ -37,12 +36,13 @@ async fn main() {
         .format_target(false)
         .init();
     info!(
-        "Starting ({})..",
+        "Starting v{} ({})..",
+        env!("CARGO_PKG_VERSION"),
         if cfg!(debug_assertions) {
             "Debug Mode"
         } else {
             "Release Mode"
-        }
+        },
     );
 
     if dotenv_res.is_ok() {
