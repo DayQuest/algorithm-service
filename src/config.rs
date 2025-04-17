@@ -57,6 +57,7 @@ pub fn overwrite(content: String) -> Result<(), Error> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(FILE_PATH)
         .unwrap();
 

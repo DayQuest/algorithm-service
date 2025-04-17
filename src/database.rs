@@ -164,7 +164,7 @@ impl DatabaseModel<Video> for Video {
         .fetch_one(db_pool)
         .await?;
 
-        Ok(process_video_row(row)?)
+        process_video_row(row)
     }
 }
 
@@ -256,6 +256,7 @@ pub async fn fetch_next_videos(
         fetch_random_videos(config, db_pool),
         fetch_hashtag_videos(config, &hashtag, db_pool)
     )?;
+    
 
     debug!(
         "Fetching videos took: {} ms",

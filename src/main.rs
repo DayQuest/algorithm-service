@@ -51,7 +51,7 @@ async fn main() {
 
     debug!(
         "JWT: {}",
-        auth::gen_token("testing".to_string()).unwrap_or_else(|e| {
+        auth::gen_token("testusername".into(), "testid".into()).unwrap_or_else(|e| {
             error!("Failed to generate test JWT: {}", e);
             "Invalid Token".to_string()
         })
@@ -109,7 +109,7 @@ fn app(config: Config, db_pool: MySqlPool) -> Router {
             "/scoreVideoPersonalized",
             post(endpoint::score_video_personalized),
         )
-        .route("/nextVideos", post(endpoint::next_videos))
+        .route("/nextVideos", get(endpoint::next_videos))
         .layer(middleware::from_fn(auth::jwt_middleware));
 
     let internal_router = Router::new()
@@ -117,13 +117,10 @@ fn app(config: Config, db_pool: MySqlPool) -> Router {
         .route("/setConfig", post(endpoint::set_config))
         .layer(middleware::from_fn(auth::internal_secret_middleware));
 
-    let final_router =
-        Router::merge(jwt_router, internal_router)
-        .layer(Extension(Arc::new(Mutex::new(config))))
-        .layer(Extension(Arc::new(db_pool)));
-        
 
-    final_router
+    Router::merge(jwt_router, internal_router)
+        .layer(Extension(Arc::new(Mutex::new(config))))
+        .layer(Extension(Arc::new(db_pool)))
 }
 
 async fn connect_db(config: &Config) -> Result<MySqlPool, sqlx::Error> {

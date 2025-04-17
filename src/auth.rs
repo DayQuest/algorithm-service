@@ -23,7 +23,7 @@ use std::env;
 use crate::config::INTERNAL_SECRET_KEY;
 use crate::config::JWT_SECRET_KEY;
 
-pub fn gen_token(username: String) -> Result<String, Error> {
+pub fn gen_token(username: String, user_id: String) -> Result<String, Error> {
     let encoding_key = EncodingKey::from_base64_secret(
         env::var(JWT_SECRET_KEY)
             .expect("Failed to get jwt secret")
@@ -35,6 +35,7 @@ pub fn gen_token(username: String) -> Result<String, Error> {
         iat: Utc::now().timestamp() as usize,
         exp: (Utc::now().timestamp() + Duration::days(365 * 200).num_seconds()) as usize,
         roles: Vec::new(),
+        user_id,
     };
 
     encode(&Header::new(Algorithm::HS256), &claims, &encoding_key)
@@ -42,7 +43,7 @@ pub fn gen_token(username: String) -> Result<String, Error> {
 
 pub fn extract_claims(token: &str) -> Result<Claims, Error> {
     let claims = decode::<Claims>(
-        &token,
+        token,
         &DecodingKey::from_base64_secret(
             env::var(JWT_SECRET_KEY)
                 .expect("Failed to get jwt secret")
@@ -57,13 +58,14 @@ pub fn extract_claims(token: &str) -> Result<Claims, Error> {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Claims {
-    pub sub: String,
+    pub sub: String, // Username
+    pub user_id: String,
     pub roles: Vec<String>,
     pub iat: usize,
     pub exp: usize,
 }
 
-fn extract_auth_header<'a>(request: &'a Request<Body>) -> Option<&'a str> {
+fn extract_auth_header(request: &Request<Body>) -> Option<&str> {
     request
         .headers()
         .get(AUTHORIZATION)

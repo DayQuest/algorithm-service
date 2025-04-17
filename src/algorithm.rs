@@ -37,8 +37,7 @@ where
 
     let weights: Vec<f64> = (0..len)
         .map(|i| {
-            let weight = decay_factor.powi(i as i32);
-            weight
+            decay_factor.powi(i as i32)
         })
         .collect();
 
@@ -219,7 +218,7 @@ pub fn score_video(video: &Video, config: &Config) -> f64 {
 }
 
 fn normalize_score(score: &mut f64, target: &f64, threshold: f64) {
-    let threshold = threshold.max(0.0).min(1.0);
+    let threshold = threshold.clamp(0.0, 1.0);
     let ratio = *score / target;
 
     if ratio > 1.0 {

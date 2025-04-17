@@ -7,9 +7,7 @@ use serde_json::json;
 use sqlx::MySqlPool;
 
 use crate::{
-    algorithm,
-    config::{self, Config},
-    database::{DatabaseModel, User, Video},
+    algorithm, auth::Claims, config::{self, Config}, database::{DatabaseModel, User, Video}
 };
 
 #[derive(Deserialize, Serialize)]
@@ -44,12 +42,12 @@ pub async fn score_video(
 #[derive(Deserialize, Serialize)]
 pub struct PersonalizeScoreResponse {
     score: f64,
+    
 }
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PersonalizeVideoRequest {
-    user_id: String,
     video_id: String,
 }
 
@@ -57,16 +55,18 @@ pub struct PersonalizeVideoRequest {
 pub async fn score_video_personalized(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<PersonalizeVideoRequest>,
 ) -> Result<Json<PersonalizeScoreResponse>, StatusCode> {
     let config = config.lock().unwrap().clone();
     match Video::from_db(&payload.video_id, &db_pool, &config).await {
-        Ok(video) => match User::from_db(&payload.user_id, &db_pool, &config).await {
+        Ok(video) => match User::from_db(&claims.user_id, &db_pool, &config).await {
             Ok(user) => {
                 let score =
                     algorithm::score_video_personalized(&user, &video, &config);
                 Ok(Json(PersonalizeScoreResponse { score }))
             }
+            
 
             Err(why) => {
                 error!("Error retrieving user data: {}", why);
@@ -81,11 +81,6 @@ pub async fn score_video_personalized(
     }
 }
 
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NextVideosRequest {
-    user_id: String,
-}
 
 #[derive(Deserialize, Serialize)]
 pub struct NextVideosResponse {
@@ -96,22 +91,22 @@ pub struct NextVideosResponse {
 pub async fn next_videos(
     Extension(db_pool): Extension<Arc<MySqlPool>>,
     Extension(config): Extension<Arc<Mutex<Config>>>,
-    Json(payload): Json<NextVideosRequest>,
+    Extension(claims): Extension<Claims>,
 ) -> Result<Json<NextVideosResponse>, StatusCode> {
     let start_time = Instant::now();
     let config = config.lock().unwrap().clone();
-    let user = User::from_db(&payload.user_id, &db_pool, &config)
+    let user: User = User::from_db(&claims.user_id, &db_pool, &config)
         .await
-        .or_else(|why| {
+        .map_err(|why| {
             warn!("Fetching user failed: {why}");
-            return Err(StatusCode::NOT_FOUND);
+            StatusCode::NOT_FOUND
         })?;
     
     let videos = algorithm::next_videos(&user, &config, &db_pool)
         .await
-        .or_else(|why| {
+        .map_err(|why| {
             error!("Next Videos Algorithm failed: {why}");
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            StatusCode::INTERNAL_SERVER_ERROR
         })?
         .iter()
         .map(|video| video.uuid.clone())
@@ -126,11 +121,6 @@ pub async fn get_config(
     Extension(config): Extension<Arc<Mutex<Config>>>,
 ) -> Result<Json<Config>, StatusCode> {
     Ok(Json((*config.lock().unwrap()).clone()))
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct SetConfigRequest {
-    uuid: String,
 }
 
 //#[debug_handler]
