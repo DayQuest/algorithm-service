@@ -83,7 +83,8 @@ async fn fetch_hashtags(
         "SELECT {HASHTAG_ID_COLUMN}
             FROM {DB_USER_LIKED_HASHTAGS_TABLE}
             WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
-            LIMIT ?"
+            ORDER BY {TIMESTAMP_COLUMN} DESC
+        	LIMIT ?"
     ))
     .bind(uuid)
     .bind(amount)
@@ -149,7 +150,8 @@ impl DatabaseModel<Video> for Video {
             {VIDEO_COMMENTS_COLUMN},
             {VIDEO_UP_VOTES_COLUMN},
             {VIDEO_DOWN_VOTES_COLUMN},
-            {VIDEO_VIEWS_COLUMN}/*, {VIDEO_VIEWTIME_COLUMN}*/ FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = UUID_TO_BIN(?) AND {VIDEO_STATUS_COLUMN} = ?;"
+            {VIDEO_VIEWS_COLUMN}, 
+            {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = UUID_TO_BIN(?) AND {VIDEO_STATUS_COLUMN} = ?;"
         ))
         .bind(uuid)
         .bind(VIDEO_READY_STATUS)
@@ -167,8 +169,8 @@ async fn fetch_random_videos(config: &Config, db_pool: &MySqlPool) -> Result<Vec
                 {VIDEO_COMMENTS_COLUMN},
                 {VIDEO_UP_VOTES_COLUMN},
                 {VIDEO_DOWN_VOTES_COLUMN},
-                {VIDEO_VIEWS_COLUMN}/*,
-                {VIDEO_VIEWTIME_COLUMN}*/
+                {VIDEO_VIEWS_COLUMN},
+                {VIDEO_VIEWTIME_COLUMN}
          FROM {DB_VIDEO_TABLE}
          WHERE {VIDEO_STATUS_COLUMN} = ?
          ORDER BY RAND()
@@ -194,15 +196,15 @@ async fn fetch_hashtag_videos(
                 {VIDEO_COMMENTS_COLUMN},
                 {VIDEO_UP_VOTES_COLUMN},
                 {VIDEO_DOWN_VOTES_COLUMN},
-                {VIDEO_VIEWS_COLUMN}/*,
-                {VIDEO_VIEWTIME_COLUMN}*/
+                {VIDEO_VIEWS_COLUMN},
+                {VIDEO_VIEWTIME_COLUMN}
          FROM {DB_VIDEO_TABLE}
          WHERE {VIDEO_STATUS_COLUMN} = ?
-           /*AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)*/
+         AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)
          LIMIT ?"
     ))
     .bind(VIDEO_READY_STATUS)
-    //.bind(hashtag_json)  
+    .bind(hashtag_json)  
     .bind(config.selecting.next_videos_fetch_amount_matching_hashtag)
     .fetch_all(db_pool)
     .await?;
@@ -222,7 +224,7 @@ fn process_video_row(row: MySqlRow) -> Result<Video, Error> {
         downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
         views: row.try_get(VIDEO_VIEWS_COLUMN)?,
         comments: row.try_get(VIDEO_COMMENTS_COLUMN)?,
-        viewtime_seconds: 0, // row.try_get(VIDEO_VIEWTIME_COLUMN)?,
+        viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
         score: 0.,
     })
 }
