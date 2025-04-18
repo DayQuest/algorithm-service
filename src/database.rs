@@ -9,7 +9,7 @@ use crate::config::{
     DB_VIEWED_VIDEOS_TABLE, FOLLOWED_USERS_COLUMN, TIMESTAMP_COLUMN, USER_ID_COLUMN, UUID_COLUMN,
     VIDEO_COMMENTS_COLUMN, VIDEO_DOWN_VOTES_COLUMN, DB_USER_LIKED_HASHTAGS_TABLE, VIDEO_ID_COLUMN,
     VIDEO_READY_STATUS, VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN,
-    VIDEO_VIEWTIME_COLUMN, VIEWED_AT_COLUMN, VIDEO_HASHTAGS_COLUMN
+    VIDEO_VIEWTIME_COLUMN, VIEWED_AT_COLUMN, VIDEO_HASHTAGS_COLUMN, HASHTAG_ID_COLUMN
 };
 
 pub trait DatabaseModel<T> {
@@ -80,10 +80,9 @@ async fn fetch_hashtags(
 ) -> Result<Vec<String>, Error> {
     debug!("{uuid}");
     let rows = query(&format!(
-        "SELECT {VIDEO_ID_COLUMN}
+        "SELECT {HASHTAG_ID_COLUMN}
             FROM {DB_USER_LIKED_HASHTAGS_TABLE}
-            WHERE {USER_ID_COLUMN} = ?
-            ORDER BY {TIMESTAMP_COLUMN} DESC
+            WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
             LIMIT ?"
     ))
     .bind(uuid)
@@ -93,14 +92,7 @@ async fn fetch_hashtags(
 
     Ok(rows
         .into_iter()
-        .filter_map(|row| {
-            row.try_get::<String, _>(VIDEO_HASHTAGS_COLUMN)
-                .ok()
-                .map(|hashtags_str| {
-                    serde_json::from_str::<Vec<String>>(&hashtags_str).unwrap_or_default()
-                })
-        })
-        .flatten()
+        .filter_map(|row| row.try_get::<String, _>(HASHTAG_ID_COLUMN).ok())
         .collect::<Vec<String>>())
 }
 
@@ -157,7 +149,7 @@ impl DatabaseModel<Video> for Video {
             {VIDEO_COMMENTS_COLUMN},
             {VIDEO_UP_VOTES_COLUMN},
             {VIDEO_DOWN_VOTES_COLUMN},
-            {VIDEO_VIEWS_COLUMN}, {VIDEO_VIEWTIME_COLUMN} FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = UUID_TO_BIN(?) AND {VIDEO_STATUS_COLUMN} = ?;"
+            {VIDEO_VIEWS_COLUMN}/*, {VIDEO_VIEWTIME_COLUMN}*/ FROM {DB_VIDEO_TABLE} WHERE {UUID_COLUMN} = UUID_TO_BIN(?) AND {VIDEO_STATUS_COLUMN} = ?;"
         ))
         .bind(uuid)
         .bind(VIDEO_READY_STATUS)
@@ -175,8 +167,8 @@ async fn fetch_random_videos(config: &Config, db_pool: &MySqlPool) -> Result<Vec
                 {VIDEO_COMMENTS_COLUMN},
                 {VIDEO_UP_VOTES_COLUMN},
                 {VIDEO_DOWN_VOTES_COLUMN},
-                {VIDEO_VIEWS_COLUMN},
-                {VIDEO_VIEWTIME_COLUMN}
+                {VIDEO_VIEWS_COLUMN}/*,
+                {VIDEO_VIEWTIME_COLUMN}*/
          FROM {DB_VIDEO_TABLE}
          WHERE {VIDEO_STATUS_COLUMN} = ?
          ORDER BY RAND()
@@ -202,15 +194,15 @@ async fn fetch_hashtag_videos(
                 {VIDEO_COMMENTS_COLUMN},
                 {VIDEO_UP_VOTES_COLUMN},
                 {VIDEO_DOWN_VOTES_COLUMN},
-                {VIDEO_VIEWS_COLUMN},
-                {VIDEO_VIEWTIME_COLUMN}
+                {VIDEO_VIEWS_COLUMN}/*,
+                {VIDEO_VIEWTIME_COLUMN}*/
          FROM {DB_VIDEO_TABLE}
          WHERE {VIDEO_STATUS_COLUMN} = ?
-           AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)
+           /*AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)*/
          LIMIT ?"
     ))
     .bind(VIDEO_READY_STATUS)
-    .bind(hashtag_json)
+    //.bind(hashtag_json)  
     .bind(config.selecting.next_videos_fetch_amount_matching_hashtag)
     .fetch_all(db_pool)
     .await?;
@@ -230,7 +222,7 @@ fn process_video_row(row: MySqlRow) -> Result<Video, Error> {
         downvotes: row.try_get(VIDEO_DOWN_VOTES_COLUMN)?,
         views: row.try_get(VIDEO_VIEWS_COLUMN)?,
         comments: row.try_get(VIDEO_COMMENTS_COLUMN)?,
-        viewtime_seconds: row.try_get(VIDEO_VIEWTIME_COLUMN)?,
+        viewtime_seconds: 0, // row.try_get(VIDEO_VIEWTIME_COLUMN)?,
         score: 0.,
     })
 }

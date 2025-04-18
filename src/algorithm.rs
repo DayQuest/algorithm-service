@@ -83,18 +83,24 @@ fn select_high_or_low_score_video(
     probability: f64,
     i: usize,
 ) {
+    if source.is_empty() {
+        return;
+    }
+    
     if random_bool(probability) {
         // Matching hashtag & high score
-        let video = source.get(source.len() - *counter - 1).unwrap();
-        final_sort.push(video.clone());
-        *counter += 1;
-
-        debug!("    highscore");
+        if let Some(video) = source.get(source.len().saturating_sub(*counter + 1)) {
+            final_sort.push(video.clone());
+            *counter += 1;
+            debug!("    highscore");
+        }
         debug!("");
     } else {
         // Matching hashtag & low score
-        final_sort.push(source.get(i).unwrap().clone());
-        debug!("    lowscore");
+        if let Some(video) = source.get(i) {
+            final_sort.push(video.clone());
+            debug!("    lowscore");
+        }
         debug!("");
     }
 }

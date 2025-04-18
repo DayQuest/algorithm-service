@@ -24,7 +24,7 @@ pub const DB_VIEWED_VIDEOS_TABLE: &str = "viewed_video";
 // pub const DB_COMMENT_TABLE: &str = "comments";
 pub const DB_USER_FOLLOWED_USER_TABLE: &str = "user_followed_users";
 pub const VIDEO_READY_STATUS: &str = "3";
-pub const DB_USER_LIKED_HASHTAGS_TABLE: &str = "user_liked_hastags";
+pub const DB_USER_LIKED_HASHTAGS_TABLE: &str = "user_liked_hashtags";
 
 // Columns
 pub const VIEWED_AT_COLUMN: &str = "viewed_at";
@@ -34,6 +34,7 @@ pub const FOLLOWED_USERS_COLUMN: &str = "followed_users";
 pub const UUID_COLUMN: &str = "uuid";
 pub const VIDEO_COMMENTS_COLUMN: &str = "comments";
 pub const VIDEO_ID_COLUMN: &str = "video_id";
+pub const HASHTAG_ID_COLUMN: &str = "hashtag_id";
 pub const VIDEO_UP_VOTES_COLUMN: &str = "up_votes";
 pub const VIDEO_HASHTAGS_COLUMN: &str = "hashtags";
 pub const VIDEO_DOWN_VOTES_COLUMN: &str = "down_votes";
