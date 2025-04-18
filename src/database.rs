@@ -82,8 +82,7 @@ async fn fetch_hashtags(
     let rows = query(&format!(
         "SELECT {HASHTAG_ID_COLUMN}
             FROM {DB_USER_LIKED_HASHTAGS_TABLE}
-            WHERE {USER_ID_COLUMN} = ?
-            ORDER BY {TIMESTAMP_COLUMN} DESC
+            WHERE {USER_ID_COLUMN} = UUID_TO_BIN(?)
             LIMIT ?"
     ))
     .bind(uuid)
@@ -93,11 +92,7 @@ async fn fetch_hashtags(
 
     Ok(rows
         .into_iter()
-        .filter_map(|row| {
-            // We still query both columns for data integrity, but only return hashtag_id
-            let _video_id = row.try_get::<String, _>(VIDEO_ID_COLUMN).ok()?;
-            row.try_get::<String, _>(HASHTAG_ID_COLUMN).ok()
-        })
+        .filter_map(|row| row.try_get::<String, _>(HASHTAG_ID_COLUMN).ok())
         .collect::<Vec<String>>())
 }
 
