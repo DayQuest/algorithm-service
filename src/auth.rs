@@ -57,6 +57,7 @@ pub fn extract_claims(token: &str) -> Result<Claims, Error> {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Claims {
     pub sub: String, // Username
     pub user_id: String,
