@@ -80,7 +80,7 @@ async fn fetch_hashtags(
 ) -> Result<Vec<String>, Error> {
     debug!("{uuid}");
     let rows = query(&format!(
-        "SELECT {VIDEO_ID_COLUMN}, {HASHTAG_ID_COLUMN}
+        "SELECT {HASHTAG_ID_COLUMN}
             FROM {DB_USER_LIKED_HASHTAGS_TABLE}
             WHERE {USER_ID_COLUMN} = ?
             ORDER BY {TIMESTAMP_COLUMN} DESC
