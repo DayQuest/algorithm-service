@@ -9,7 +9,7 @@ use crate::config::{
     DB_VIEWED_VIDEOS_TABLE, FOLLOWED_USERS_COLUMN, TIMESTAMP_COLUMN, USER_ID_COLUMN, UUID_COLUMN,
     VIDEO_COMMENTS_COLUMN, VIDEO_DOWN_VOTES_COLUMN, DB_USER_LIKED_HASHTAGS_TABLE, VIDEO_ID_COLUMN,
     VIDEO_READY_STATUS, VIDEO_STATUS_COLUMN, VIDEO_UP_VOTES_COLUMN, VIDEO_VIEWS_COLUMN,
-    VIDEO_VIEWTIME_COLUMN, VIEWED_AT_COLUMN, VIDEO_HASHTAGS_COLUMN
+    VIDEO_VIEWTIME_COLUMN, VIEWED_AT_COLUMN, VIDEO_HASHTAGS_COLUMN, HASHTAG_ID_COLUMN
 };
 
 pub trait DatabaseModel<T> {
@@ -80,7 +80,7 @@ async fn fetch_hashtags(
 ) -> Result<Vec<String>, Error> {
     debug!("{uuid}");
     let rows = query(&format!(
-        "SELECT {VIDEO_ID_COLUMN}
+        "SELECT {VIDEO_ID_COLUMN}, {HASHTAG_ID_COLUMN}
             FROM {DB_USER_LIKED_HASHTAGS_TABLE}
             WHERE {USER_ID_COLUMN} = ?
             ORDER BY {TIMESTAMP_COLUMN} DESC
@@ -94,13 +94,10 @@ async fn fetch_hashtags(
     Ok(rows
         .into_iter()
         .filter_map(|row| {
-            row.try_get::<String, _>(VIDEO_HASHTAGS_COLUMN)
-                .ok()
-                .map(|hashtags_str| {
-                    serde_json::from_str::<Vec<String>>(&hashtags_str).unwrap_or_default()
-                })
+           let video_id = row.try_get::<String, _>(VIDEO_ID_COLUMN).ok()?;
+           let hashtag_id = row.try_get::<String, _>(HASHTAG_ID_COLUMN).ok()?;
         })
-        .flatten()
+     
         .collect::<Vec<String>>())
 }
 
