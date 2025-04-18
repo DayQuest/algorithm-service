@@ -198,11 +198,11 @@ async fn fetch_hashtag_videos(
                 {VIDEO_VIEWTIME_COLUMN}*/
          FROM {DB_VIDEO_TABLE}
          WHERE {VIDEO_STATUS_COLUMN} = ?
-           AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)
+           /*AND JSON_CONTAINS({VIDEO_HASHTAGS_COLUMN}, ?)*/
          LIMIT ?"
     ))
     .bind(VIDEO_READY_STATUS)
-    .bind(hashtag_json)
+    //.bind(hashtag_json)  
     .bind(config.selecting.next_videos_fetch_amount_matching_hashtag)
     .fetch_all(db_pool)
     .await?;
