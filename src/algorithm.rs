@@ -26,7 +26,7 @@ fn sort_out_repeated_videos(config: &Config, videos: &mut Vec<Video>, user: &Use
     });
 }
 
-fn weighted_random<T>(vec: &Vec<T>, decay_factor: f64) -> Option<T>
+fn weighted_random<T>(vec: &[T], decay_factor: f64) -> Option<T>
 where
     T: Clone,
 {
@@ -78,7 +78,7 @@ fn sort_user_hashtags_by_frequency(user: &User) -> Vec<String> {
 
 fn select_high_or_low_score_video(
     final_sort: &mut Vec<Video>,
-    source: &Vec<Video>,
+    source: &[Video],
     counter: &mut usize,
     probability: f64,
     i: usize,
